@@ -9,9 +9,7 @@ var LeftToRight = true; // assume Left to Right first
 
 macro "Auto500 Tool - Cf20505T59135" {
    getCursorLoc(x, y, z, flags);
-//   run("Set Scale...", "distance=1 known=25 pixel=1 unit=um");
    run("Set Scale...", "distance=51 known=200 unit=um");
-   //run("Set Scale...", "distance = 51 known = 200 pixel = 1 unit = um");
    len = 500; //scaled version (not in pixels)
    toUnscaled(len); // convert to pixels
    if(LeftToRight){
