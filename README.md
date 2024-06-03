@@ -8,7 +8,7 @@ This file has a few key assumptions:
 * Line desired is perfectly horizontal (angle 0 with the x-axis)
 
 How to Use: 
-* first download the 'Auto500Line.ijm' file (found on top right under "..." after selecting )
+* first download the 'Auto500Line.ijm' file (found on top right under "..." after selecting 'Auto500Line.ijm' on the left side of current page)
 * Move this file into your fiji software by:
 * Opening Fiji File Folder - opening macro folder - pasting into macro folder
 * In Fiji itself, simply click Plugins -> Macros -> Install -> Select the file
