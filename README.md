@@ -11,6 +11,7 @@ How to Use:
 * first download the 'Auto500Line.ijm' file (found on top right under "..." after selecting 'Auto500Line.ijm' on the left side of current page)
 * Move this file into your fiji software by:
 * Opening Fiji File Folder - opening macro folder - pasting into macro folder
+* On windows, this looked like: fiji-win64 -> Fiji.app -> macros
 * In Fiji itself, simply click Plugins -> Macros -> Install -> Select the file
 
 The current file icon is a red #5. The icon must be clicked (darker background than all the other icons) in order to be active. 
