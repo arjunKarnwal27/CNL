@@ -14,6 +14,8 @@ How to Use:
 * On windows, this looked like: fiji-win64 -> Fiji.app -> macros
 * In Fiji itself, simply click Plugins -> Macros -> Install -> Select the file
 
+Alternatively, you could automatically include the macro when you launch Fiji by copy and pasting the code into the (bottom of the) StartupMacros.ijm file found in the macros folder
+
 The current file icon is a red #5. The icon must be clicked (darker background than all the other icons) in order to be active. 
 
 Questions/Modifications requested?
