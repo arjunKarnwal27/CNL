@@ -2,6 +2,8 @@
 
 File Directory:
 
+'OvalEXAMPLE' is some sample code given by FIJI (I did not develop it, but can answer questions about it if needed) - it simply creates a circle with radius "radius" centered at the current cursor position. Implementation is identical to the 'Auto500Line.ijm' implementation, outlined below.
+
 'Auto500Line.ijm' is a macro/tool for the Fiji / imageJ software that automatically creates a horiontal line of length 500 (um) starting from the current cursor position, and extending left / right as the user chooses. 
 This file has a few key assumptions:
 * The scale factor is .255 um/pixel (51 pixels for 200 um)
