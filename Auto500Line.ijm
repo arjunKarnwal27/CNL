@@ -26,3 +26,11 @@ macro "Auto500 Tool Options" {
    LeftToRight = getBoolean("Choose Direction", "Left to Right", "Right to Left");
    
 }
+
+macro "Set Tool to Auto500 [q]" { // keyboard shortcut
+	setTool("Auto500 Tool");	
+}
+
+macro "Measure Current Line [b]"{ // keyboard shortcut
+	run("Measure");
+}
