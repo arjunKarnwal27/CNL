@@ -7,16 +7,22 @@
 
 var LeftToRight = true; // assume Left to Right first
 
-macro "Auto500 Tool - Cf20505T59135" {
+var LeftToRight = true; // assume Left to Right first
+
+macro "Auto500 Tool - Cf20505T09135T69130T95130" {
    getCursorLoc(x, y, z, flags);
    run("Set Scale...", "distance=51 known=200 unit=um");
    len = 500; //scaled version (not in pixels)
    toUnscaled(len); // convert to pixels
    if(LeftToRight){
    makeLine(x,y,x+len,y);
+   setTool("line");
+   
+   //setTool("Auto500 Tool"); // works
    }
    else{
    makeLine(x,y,x-len,y);
+   setTool("line");
    }
    
 }
@@ -27,7 +33,7 @@ macro "Auto500 Tool Options" {
    
 }
 
-macro "Set Tool to Auto500 [q]" { // keyboard shortcut
+macro "Set Tool to Auto500 [q]" {
 	setTool("Auto500 Tool");	
 }
 
