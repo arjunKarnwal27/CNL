@@ -298,14 +298,22 @@ macro "Set Tool to Auto500 [q]" {
 	setTool("Auto500 Tool");	
 }
 
-macro "Measure Current Line [b]"{
+macro "Measure Current Line or Test [b]"{
 	run("Measure");
-	
+	getCursorLoc(x, y, z, flags);
+	makePoint(x, y);
+	setKeyDown("shift"); // necessary for every point, unless makeSelection()...
+	// auto update...
+	makePoint(x+60, y+60);
+	setKeyDown("shift");
+	makePoint(x+60, y);
 }
 
 macro "Color Picker Tool -C44f-o4499" {
         getCursorLoc(x, y, z, flags);
+        //makeLine(x, y, x, y+47);
         v = getPixel(x,y);
+        testThres(x,y);
         row = nResults;
         setResult("X", row, x);
         setResult("Y", row, y);
@@ -348,4 +356,18 @@ green = (v>>8)&0xff; // extract green byte (bits 15-8)
 blue = v&0xff;       // extract blue byte (bits 7-0)
 luminosity1 = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
 return luminosity1;
+}
+
+function testThres(startX, startY){ // option A - no list, just checking previous pixel
+	botY = startY + 47; // currently going top-down
+	for (i = startY; i < botY; i++) {
+		//setKeyDown("shift");
+		//makePoint(startX,i);
+		currLuminosity  = getAvgNineBrightness(startX,i);
+		nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
+		if(Math.abs(currLuminosity - nextLuminosity) > 8){
+			setKeyDown("shift");
+			makePoint(startX, i);
+		}
+	}
 }
