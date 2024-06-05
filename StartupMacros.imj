@@ -294,19 +294,25 @@ macro "Auto500 Tool Options" {
    
 }
 
-macro "Set Tool to Auto500 [q]" {
-	setTool("Auto500 Tool");	
+macro "Auto Update StartUp [q]" {
+	run("Install...", "install=C:/Users/13107/Downloads/fiji-win64/Fiji.app/macros/StartupMacros.fiji.ijm");
+	setTool("Color Picker Tool");
 }
 
 macro "Measure Current Line or Test [b]"{
-	run("Measure");
+	//run("Measure");
 	getCursorLoc(x, y, z, flags);
-	makePoint(x, y);
-	setKeyDown("shift"); // necessary for every point, unless makeSelection()...
+	//makePoint(x, y);
+	//makeLine(x, y, getWidth(), y);
+	for (i = x; i < getWidth(); i++) {
+	testThres(i,y);
+	}
+	//setKeyDown("shift"); // necessary for every point, unless makeSelection()...
 	// auto update...
-	makePoint(x+60, y+60);
-	setKeyDown("shift");
-	makePoint(x+60, y);
+	  //makePoint(90, 161, "small red cross add");
+	//makePoint(x+60, y+60,"small red dot add label");
+	//setKeyDown("shift");
+	//makePoint(x+60, y);
 }
 
 macro "Color Picker Tool -C44f-o4499" {
@@ -333,6 +339,11 @@ macro "Color Picker Tool -C44f-o4499" {
         
    }
 
+macro "Color Picker Tool Options" {
+   threshold = getNumber("Enter new Threshold", 8);
+   
+}
+
 function getAvgNineBrightness(x1,y1) { 
 // function description 
 self = getPixel(x1, y1);
@@ -345,11 +356,11 @@ bot = getPixel(x1,y1+1);
 botLeft = getPixel(x1-1,y1+1);
 left = getPixel(x1-1,y1);
 
-return (doSomething(self) + doSomething(topLeft) + doSomething(top) + doSomething(topRight) + doSomething(right) + doSomething(botRight) + doSomething(bot) + doSomething(botLeft) + doSomething(left))/9;
+return (getLuminosity(self) + getLuminosity(topLeft) + getLuminosity(top) + getLuminosity(topRight) + getLuminosity(right) + getLuminosity(botRight) + getLuminosity(bot) + getLuminosity(botLeft) + getLuminosity(left))/9;
 
 }
 
-function doSomething(v) { 
+function getLuminosity(v) { 
 // function description
 red = (v>>16)&0xff;  // extract red byte (bits 23-17)
 green = (v>>8)&0xff; // extract green byte (bits 15-8)
@@ -358,16 +369,23 @@ luminosity1 = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
 return luminosity1;
 }
 
+var threshold = 6.5;
+
 function testThres(startX, startY){ // option A - no list, just checking previous pixel
-	botY = startY + 47; // currently going top-down
+	botY = startY + 80; // currently going top-down
 	for (i = startY; i < botY; i++) {
 		//setKeyDown("shift");
 		//makePoint(startX,i);
 		currLuminosity  = getAvgNineBrightness(startX,i);
 		nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
-		if(Math.abs(currLuminosity - nextLuminosity) > 8){
+		//currLuminosity  = getAvgNineBrightness(startX,i);
+		//nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
+		
+		
+		
+		if(Math.abs(currLuminosity - nextLuminosity) > threshold){
 			setKeyDown("shift");
-			makePoint(startX, i);
+			makePoint(startX, i, "small yellow dot add"); //  small --> tiny for even smaller
 		}
 	}
 }
