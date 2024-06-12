@@ -7,7 +7,7 @@
 
 var LeftToRight = true; // assume Left to Right first
 
-macro "Auto500 Tool - Cf20505T09135T69130T95130" {
+macro "Auto500 Tool - Cf20505T0913AT99135" {
    getCursorLoc(x, y, z, flags);
    run("Set Scale...", "distance=51 known=200 unit=um"); // assuming scale is consistent
    len = 500; //scaled version (not in pixels)
