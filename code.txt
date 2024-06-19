@@ -11,12 +11,12 @@ double downsample = 1.0
 
 // Read the whole image
 def metadata = server.getMetadata()
-int x = 0
-int y = 7300
+int x_start = 0
+int y_start = 7300
 int width = 13000
 int height = 400
 
-def request = RegionRequest.createInstance(path, downsample, x, y, width, height)
+def request = RegionRequest.createInstance(path, downsample, x_start, y_start, width, height)
 def img = server.readRegion(request)
 print img
 
@@ -27,7 +27,7 @@ for (int y = 0; y < img.getHeight(); y++) {
     for (int x = 0; x < img.getWidth(); x++) {
         def rgb = img.getRGB(x, y)
         if (rgb != -16777216) {
-            nonBlackRegions.add(new RectangleROI((double) x, (double) y + 7300, 1, 1, getCurrentViewer().getImagePlane()))
+            nonBlackRegions.add(new RectangleROI((double) x + x_start, (double) y + y_start, 1, 1, getCurrentViewer().getImagePlane()))
         }
     }
 }
@@ -51,4 +51,4 @@ if (combinedROI != null) {
     selectObjects(annotation)
 }
 
-def result = runPlugin('qupath.opencv.CellCountsCV', '{"gaussianSigmaPixels":3.5,"backgroundRadiusPixels":60.0,"doDoG":true,"threshold":1.0,"ensureMainStain":false,"detectionDiameter":1.0}')
+def result = runPlugin('qupath.opencv.CellCountsCV', '{"gaussianSigmaPixels":3.5,"backgroundRadiusPixels":80.0,"doDoG":true,"threshold":1.0,"ensureMainStain":false,"detectionDiameter":1.0}')
