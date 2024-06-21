@@ -444,7 +444,7 @@ counterr = 0;
 
 for (a = 0; a < numIterations; a++) {
 	counterr=0;
-for (i = -50; i < width; i++) { // important one
+for (i = 0; i < cenX; i++) { // important one
 
 xPts[counterr] = i;
 yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
@@ -516,6 +516,91 @@ for (u = 0; u < xListUnfiltered.length; u++) {
 makeSelection("freeline", xListUnfiltered, yListUnfiltered);
 
 //run("Straighten...", "title=[Pog] line=300");
+
+//JFEIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+// iteration 2 -> bounds of angle loop changed to accomodate 360 without double length line
+xPts = newArray(width-cenX);
+yPts = newArray(width-cenX);
+
+numIterations = 350;
+
+xListUnfiltered2 = newArray(numIterations);
+yListUnfiltered2 = newArray(numIterations);
+
+thetaTEST = 0;
+counterr = 0;
+
+for (a = 0; a < numIterations; a++) {
+	counterr=0;
+for (i = cenX; i < width; i++) { // important one
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
+counterr = counterr + 1;
+}
+
+//makeSelection("freeline", xPts, yPts);
+
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+//makePoint(avgX,avgY);
+
+xListUnfiltered2[a] = avgX;
+yListUnfiltered2[a] = avgY;
+
+makeSelection("freeline", xPts, yPts);
+step= PI/300;
+thetaTEST = thetaTEST + step;
+
+}
+xListUnfiltered2 = Array.deleteValue(xListUnfiltered2, 250);
+yListUnfiltered2 = Array.deleteValue(yListUnfiltered2, 250);
+
+
+//makeSelection("freeline", xListUnfiltered2, yListUnfiltered2);
+
+//run("Straighten...", "title=[Pog] line=300");
+
+xListFinal1 = Array.concat(xListUnfiltered,xListUnfiltered2);
+yListFinal1 = Array.concat(yListUnfiltered,yListUnfiltered2);
+
+makeSelection("freeline", xListFinal1, yListFinal1);
+
 }
 
 
