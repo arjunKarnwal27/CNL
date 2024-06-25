@@ -269,74 +269,35 @@ macro "Save Inverted FITS" {
 }
 
 var LeftToRight = true; // assume Left to Right first
-
-macro "Auto500 Tool - Cf20505T09135T69130T95130" {
-   getCursorLoc(x, y, z, flags);
-   run("Set Scale...", "distance=51 known=200 unit=um");
-   len = 500; //scaled version (not in pixels)
-   toUnscaled(len); // convert to pixels
-   if(LeftToRight){
-   makeLine(x,y,x+len,y);
-   setTool("line");
-   
-   //setTool("Auto500 Tool"); // works
-   }
-   else{
-   makeLine(x,y,x-len,y);
-   setTool("line");
-   }
-   
-}
-
-macro "Auto500 Tool Options" {
-   run("Set Scale...", "distance=51 known=200 unit=um");
-   LeftToRight = getBoolean("Choose Direction", "Left to Right", "Right to Left");
-   
-}
-
-macro "Auto Update StartUp [q]" {
-	run("Install...", "install=C:/Users/13107/Downloads/fiji-win64/Fiji.app/macros/StartupMacros.fiji.ijm");
-	setTool("Color Picker Tool");
-}
-
-macro "Measure Current Line or Test [b]"{
-	//run("Measure");
-	getCursorLoc(x, y, z, flags);
-	//makePoint(x, y);
-	//makeLine(x, y, getWidth(), y);
-	for (i = x; i < getWidth(); i++) {
-	testThres(i,y);
-	}
-	//setKeyDown("shift"); // necessary for every point, unless makeSelection()...
-	// auto update...
-	  //makePoint(90, 161, "small red cross add");
-	//makePoint(x+60, y+60,"small red dot add label");
-	//setKeyDown("shift");
-	//makePoint(x+60, y);
-}
+var radius = 8;
 
 macro "Color Picker Tool -C44f-o4499" {
-        getCursorLoc(x, y, z, flags);
-        //makeLine(x, y, x, y+47);
-        v = getPixel(x,y);
-        testThres(x,y);
-        row = nResults;
-        setResult("X", row, x);
-        setResult("Y", row, y);
-        if (nSlices>1) setResult("Z", row, z);
-        if (bitDepth==24) {
-            red = (v>>16)&0xff;  // extract red byte (bits 23-17)
-            green = (v>>8)&0xff; // extract green byte (bits 15-8)
-            blue = v&0xff;       // extract blue byte (bits 7-0)
-            brightness = (red + blue + green) / 3;
-            luminosity = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-            setResult("Avg9", row, getAvgNineBrightness(x,y));
-            setResult("Luminosity",row,luminosity); // same as brightness...
-            
-        } else
-            setResult("Value", row, v);
-        updateResults;
-        
+		getLine(x1, y1, x2, y2, width);
+	  if (x1==-1)
+		   exit("This macro requires a straight line selection");
+	  angle = (180.0/PI)*atan2(y1-y2, x2-x1);
+	  run("Arbitrarily...", "angle="+angle+" interpolate");
+		getCursorLoc(x, y, z, flags);
+		//makeLine(x, y, x, y+47);
+		v = getPixel(x,y);
+		testThres(x,y);
+		row = nResults;
+		setResult("X", row, x);
+		setResult("Y", row, y);
+		if (nSlices>1) setResult("Z", row, z);
+		if (bitDepth==24) {
+			red = (v>>16)&0xff;  // extract red byte (bits 23-17)
+			green = (v>>8)&0xff; // extract green byte (bits 15-8)
+			blue = v&0xff;	   // extract blue byte (bits 7-0)
+			brightness = (red + blue + green) / 3;
+			luminosity = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+			setResult("Avg9", row, getAvgNineBrightness(x,y));
+			setResult("Luminosity",row,luminosity); // same as brightness...
+			
+		} else
+			setResult("Value", row, v);
+			updateResults;
+		
    }
 
 macro "Color Picker Tool Options" {
@@ -348,7 +309,7 @@ function getAvgNineBrightness(x1,y1) {
 // function description 
 self = getPixel(x1, y1);
 topLeft = getPixel(x1-1,y1-1);
-top = getPixel(x1,y-1);
+top = getPixel(x1,y1-1);
 topRight = getPixel(x1+1,y1-1);
 right = getPixel(x1+1,y1);
 botRight = getPixel(x1+1,y1+1);
@@ -364,9 +325,15 @@ function getLuminosity(v) {
 // function description
 red = (v>>16)&0xff;  // extract red byte (bits 23-17)
 green = (v>>8)&0xff; // extract green byte (bits 15-8)
-blue = v&0xff;       // extract blue byte (bits 7-0)
+blue = v&0xff;	   // extract blue byte (bits 7-0)
 luminosity1 = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+
 return luminosity1;
+}
+
+function getLum2(x,y) { 
+// function description
+return getPixel(x, y);
 }
 
 var threshold = 6.5;
@@ -378,8 +345,10 @@ function testThres(startX, startY){ // option A - no list, just checking previou
 		//makePoint(startX,i);
 		currLuminosity  = getAvgNineBrightness(startX,i);
 		nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
-		//currLuminosity  = getAvgNineBrightness(startX,i);
-		//nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
+		//curr = getPixel(startX,i);
+		//currLuminosity  = getLuminosity(v);
+		//next = getPixel(startX,i+1);
+		//nextLuminosity = getLuminosity(next); // going down 1
 		
 		
 		
@@ -388,4 +357,592 @@ function testThres(startX, startY){ // option A - no list, just checking previou
 			makePoint(startX, i, "small yellow dot add"); //  small --> tiny for even smaller
 		}
 	}
+}
+
+
+function getLocalThreshold(x,y) { 
+// function description
+
+}
+
+macro "Auto500 Tool - Cf20505T0913AT99135" {
+   getCursorLoc(x, y, z, flags);
+   //run("Set Scale...", "distance=51 known=200 unit=um");
+   //len = 500; //scaled version (not in pixels)
+   //toUnscaled(len); // convert to pixels
+   
+   makeOval(x-radius, y-radius, radius*2, radius*2);
+   roiManager("show all without labels");
+   
+   
+}
+
+macro "Auto500 Tool Options" {
+   run("Set Scale...", "distance=51 known=200 unit=um");
+   LeftToRight = getBoolean("Choose Direction", "Left to Right", "Right to Left");
+   
+}
+
+macro "Auto Update StartUp [q]" {
+run("Install...", "install=C:/Users/13107/Downloads/fiji-win64/Fiji.app/macros/StartupMacros.fiji.ijm");
+//call("trainableSegmentation.Weka_Segmentation.addTrace", "0", "1");
+//roiManager("show all without labels");
+test = false;
+if(test){
+
+
+setTool("Auto500 Tool");
+//open("C:/Users/13107/Downloads/test3.JPG");
+	//selectImage("test3.JPG");
+//run("Split Channels");
+roiManager("show all without labels");
+n = roiManager('count');
+for (i = 0; i < n; i++) {
+//selectImage("t2.png");
+	roiManager('select', i);
+	sum = 0;
+	Roi.getContainedPoints(xpoints, ypoints);
+	for (a = 0; a < xpoints.length; a++){
+	xVal = xpoints[a];
+	yVal = ypoints[a];
+	if(getLum2(xVal,yVal) < 56){
+	Roi.setStrokeColor(0, 0, 255);
+break; // unnecessary
+	}
+	sum = sum + getLum2(xVal,yVal);
+	
+	}
+	avg = sum / xpoints.length;
+	if(avg < 90){
+	Roi.setStrokeColor(255, 255 , 1);
+	}
+	// process roi here
+}
+}
+}
+
+macro "Measure Current Line or Test [b]"{
+//run("Measure");
+//getCursorLoc(x, y, z, flags);
+imgTest = true;
+if(imgTest){
+width = getWidth();
+height = getHeight();
+cenX = width/2;
+cenY = height/2;
+}
+
+
+
+test6 = false;
+
+test9 = false;
+if(test9){
+path = File.openDialog("choose file");
+dir = File.getParent(path);
+list = getFileList(dir);
+ print("Directory contains "+list.length+" files");
+}
+
+test8 = false;
+if(test8){
+	xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 600;
+	fListX = newArray(numIterations);
+	fListY = newArray(numIterations);
+	thetaTest = 0; // will refine later ...
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+	if(a < 150 || (a > 450)){ // neg to positive ???
+		for (i = 0; i < cenX; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+		}
+		else{
+		//thetaTest = 0;	
+		for (i = cenX; i < width; i++) {
+		//counter = 0;
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+	// just straighten 2x! 
+			
+			}
+	
+	fListX[a] = x;
+	fListY[a] = y;
+	}
+	cleanXList1 = Array.deleteValue(fListX, 250);
+	cleanYList1 = Array.deleteValue(fListY, 250);
+	
+	makeSelection("freeline", cleanXList1, cleanYList1);
+	run("Straighten...", "title=[Pog] line=900"); // make spline fit?
+	selectImage("Pog");
+	saveAs("Tiff", "C:/Users/13107/Downloads/test3/NAME.tif");
+	print("done"); //unused rn
+	}
+
+test7 = false;
+if(test7){
+xPts = newArray(width-cenX); // loop errors...
+yPts = newArray(width-cenX);
+
+numIterations = 300;
+
+xListUnfiltered = newArray(numIterations);
+yListUnfiltered = newArray(numIterations);
+
+thetaTEST = 0;
+counterr = 0;
+
+for (a = 0; a < numIterations; a++) {
+	counterr=0;
+for (i = width; i >= cenX; i--) { // important one - currently reversed (--)
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
+counterr = counterr + 1;
+}
+
+
+
+
+
+makeSelection("freeline", xPts, yPts);
+
+
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+//makePoint(avgX,avgY);
+
+xListUnfiltered[a] = avgX;
+yListUnfiltered[a] = avgY;
+
+makeSelection("freeline", xPts, yPts);
+step= PI/300; // try increasing
+thetaTEST = thetaTEST + step;
+
+
+
+}
+
+xListUnfiltered = Array.deleteValue(xListUnfiltered, 250);
+yListUnfiltered = Array.deleteValue(yListUnfiltered, 250);
+
+xListFiltered = newArray(xListUnfiltered.length/3);
+yListFiltered = newArray(yListUnfiltered.length/3);
+every = 3;
+for (u = 0; u < xListUnfiltered.length; u++) {
+	if(u % every == 0){
+	xListFiltered[u] = xListUnfiltered[u]; // doesnt work :(
+	yListFiltered[u] = yListUnfiltered[u]; // sort with reverse y ? 
+	}
+}
+makeSelection("freeline", xListUnfiltered, yListUnfiltered);
+
+//run("Straighten...", "title=[Pog] line=300");
+
+//JFEIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+// iteration 2 -> bounds of angle loop changed to accomodate 360 without double length line
+xPts = newArray(width-cenX);
+yPts = newArray(width-cenX);
+
+numIterations = 350;
+
+xListUnfiltered2 = newArray(numIterations);
+yListUnfiltered2 = newArray(numIterations);
+
+thetaTEST = 0;
+counterr = 0;
+
+for (a = 0; a < numIterations; a++) {
+	counterr=0;
+for (i = cenX; i < width; i++) { // important one
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
+counterr = counterr + 1;
+}
+
+//makeSelection("freeline", xPts, yPts);
+
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+//makePoint(avgX,avgY);
+
+xListUnfiltered2[a] = avgX;
+yListUnfiltered2[a] = avgY;
+
+//makeSelection("freeline", xPts, yPts);
+step= PI/300;
+thetaTEST = thetaTEST + step;
+
+}
+xListUnfiltered2 = Array.deleteValue(xListUnfiltered2, 250);
+yListUnfiltered2 = Array.deleteValue(yListUnfiltered2, 250);
+
+
+//makeSelection("freeline", xListUnfiltered2, yListUnfiltered2);
+
+
+xListFinal1 = Array.concat(xListUnfiltered,xListUnfiltered2);
+yListFinal1 = Array.concat(yListUnfiltered,yListUnfiltered2);
+
+makeSelection("freeline", xListFinal1, yListFinal1);
+
+//run("Straighten...", "title=[Pog] line=300");
+
+
+}
+
+
+
+test3 = false;
+if(test3){
+	
+setOption("ScaleConversions", true);
+run("8-bit");
+run("Red/Green");
+for (i = 0; i < 7; i++) { // check color histogram probably... -
+run("Smooth");
+
+}
+
+
+}
+
+
+if(test6){
+makePoint(cenX+100,cenY);
+//wait(500);
+
+xPts = newArray(width-cenX);
+yPts = newArray(width-cenX);
+
+thetaTEST = 0;
+counterr = 0;
+wX = newArray(0);
+wY = newArray(0);
+for (a = 0; a < 100; a++) {
+	counterr=0;
+for (i = cenX; i < width; i++) {
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // check theta to change negative
+counterr = counterr + 1;
+}
+
+//makeSelection("freeline", xPts, yPts);
+
+
+c11 = 0;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+yRn = round(yPts[b+1]);
+val = getPixel(xPts[b],yR);
+nextPix = getPixel(xPts[b+1],yRn); // x always whole # 
+if(val < 129 && nextPix > 129){ // val < 129 - is red, and > 129, next not red
+setKeyDown("shift");
+//makePoint(xPts[b], yR);
+c11 = c11 +1;
+wX = Array.concat(wX,xPts[b]);
+wY = Array.concat(wY,yR);
+break;
+
+}
+
+}
+
+
+
+step = PI / 300;
+thetaTEST = thetaTEST + step;
+//wait(50);
+}
+makeSelection("polyline", wX, wY);
+wait(500);
+//run("Straighten...", "title=[Pog] line=35");
+oXmin = 0;
+  oXmax = getWidth();
+  oYmin = 0;
+  oYmax = getHeight();
+  // select new image here
+  selectImage("Ep150-1M0602-OD3_001.svs - Series 3");
+  newXmin = 0;
+  newXmax = getWidth();
+  newYmin = 0;
+  newYmax = getHeight(); // filter list for every few pts
+newXs = changeCords(wX, oXmin, oXmax, newXmin, newXmax);
+newYs = changeCords(wY, oYmin, oYmax, newYmin, newYmax);
+fXs = newArray(0);
+fYs = newArray(0);
+gap = 10;
+for (p = 0; p < newXs.length; p++) {
+if(p % gap == 0){
+fXs = Array.concat(fXs,newXs[p]);
+fYs = Array.concat(fYs,newYs[p]);
+}
+
+}
+makeSelection("polyline", fXs, fYs);
+// straighten !
+run("Straighten...", "title=[Pog] line=100");
+
+
+}
+
+//makeSelection("polygon", newArray(0,0,100,100), newArray(100,200,100,200));
+//call("trainableSegmentation.Weka_Segmentation.addTrace", "1", "1");
+	test4 = false;
+	if(test4){
+		
+	
+	Roi.getCoordinates(xpoints, ypoints); // for original ROI/selection
+  	//selectImage("Ep150-1M0602-OD3_001.svs - Series 3");
+  //makeSelection("polyline", xpoints, ypoints);
+  
+  newXVals = newArray(xpoints.length);
+  newYVals = newArray(xpoints.length);
+  
+  oXmin = 0;
+  oXmax = getWidth();
+  oYmin = 0;
+  oYmax = getHeight();
+  // select new image here
+  selectImage("Ep150-1M0602-OD3_001.svs - Series 2");
+  newXmin = 0;
+  newXmax = getWidth();
+  newYmin = 0;
+  newYmax = getHeight();
+  
+  for (i = 0; i < xpoints.length; i++) {
+  xVal = xpoints[i];
+  yVal = ypoints[i];
+  newXVals[i] = interp1(xVal,  oXmin,  oXmax,  newXmin,  newXmax);
+  newYVals[i] = interp1(yVal, oYmin, oYmax, newYmin, newYmax);
+  
+  }
+  
+  makeSelection("freeline", newXVals, newYVals);
+  
+  }
+
+
+
+}
+
+test2 = false; // nvm...
+//makeRectangle(800,700, 10, 100);
+
+if(test2){
+	Roi.getCoordinates(xpoints, ypoints); // do error message at some point
+	firstX = xpoints[0];
+	lastX = xpoints[xpoints.length-1];
+	minX = lastX;
+	minIsLast = true;
+	if(firstX < lastX){
+		minX = firstX;
+		minIsLast = false;
+	}
+	
+	//makePoint(xpoints[0],ypoints[0]);
+	//makeLine(minX,0,minX,getHeight());
+	//makeLine(minX,0,getWidth(),0);
+	makeRectangle(minX,0,getWidth()-minX,getHeight());
+	run("Crop");
+	
+	makeLine(xpoints,ypoints);
+	if(minIsLast){
+		
+		
+		//makeRectangle(minX, ypoints[0], getWidth()-minX, getHeight()-ypoints[0]);   // assuming top down for now
+	}
+	//makeRectangle(minX, y, width, height);
+	//makePoint(lastX, ypoints[1]);
+}
+
+test = false;
+if(test){
+
+
+open("C:/Users/13107/Downloads/cellsToCount.png");
+open("C:/Users/13107/Downloads/cellsToCount.png");
+run("8-bit");
+setOption("BlackBackground", true);
+run("Convert to Mask");
+run("Invert LUTs");
+run("Watershed");
+//run("Analyze Particles...", "  show=Outlines display clear include summarize add");
+//run("Analye Particles...", "show=Outlines display ");
+run("Analyze Particles...", "size=100-600 show=Outlines display clear include summarize add");
+//makePoint(x, y);
+//makeLine(x, y, getWidth(), y);
+//for (i = x; i < getWidth(); i++) {
+//testThres(i,y);
+//}
+//setKeyDown("shift"); // necessary for every point, unless makeSelection()...
+// auto update...
+  //makePoint(90, 161, "small red cross add");
+//makePoint(x+60, y+60,"small red dot add label");
+//setKeyDown("shift");
+//makePoint(x+60, y);
+}
+}
+}
+}
+
+function interp1( x,  in_min,  in_max,  out_min,  out_max) { 
+// function description - arduino map command 
+
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+function changeCords(xListOriginal, prevMin, prevMax, newMin, newMax){
+finalList = newArray(xListOriginal.length); // size things
+for (i = 0; i < xListOriginal.length; i++) {
+val = xListOriginal[i];
+newVal = interp1(val, prevMin, prevMax, newMin, newMax);
+finalList[i] = newVal;
+}
+
+
+return finalList;
+}
+
+function getControlPoint(xPts,yPts) { 
+// function description
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+makePoint(avgX,avgY);
+
+a = newArray(avgX,avgY);
+return a;
+
+}
+
+function testLOL() { 
+// function description
+a = newArray(250,250);
+return a;
 }
