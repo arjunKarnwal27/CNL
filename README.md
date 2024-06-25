@@ -3,7 +3,7 @@
 File Directory:
 
 # Auto500Line.ijm 
-A macro/tool for the Fiji / imageJ software that automatically creates a horiontal line of length 500 (um) starting from the current cursor position, and extending left / right as the user chooses. 
+A macro/tool for the Fiji / imageJ software that automatically creates a horiontal line of length 500 (um) starting from the current cursor position, and extending left / right as the user chooses. This has a unique application in the world of OCT image analysis, in which repeated segments of length 500 are required, yet nearly impossible for a human to perform. 
 This file has a few key assumptions:
 * The scale factor is .255 um/pixel (51 pixels for 200 um) -> if you wish to delete this, simply delete the line starting with 'setScale' after copying the code
 * Line desired is perfectly horizontal (angle 0 with the x-axis)
