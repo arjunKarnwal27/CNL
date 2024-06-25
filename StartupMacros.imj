@@ -425,6 +425,12 @@ macro "Measure Current Line or Test [b]"{
 //run("Measure");
 //getCursorLoc(x, y, z, flags);
 imgTest = true;
+
+inputFolder = getDir("Choose Input Folder");
+outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
+list = getFileList(b);
+
+
 if(imgTest){
 width = getWidth();
 height = getHeight();
@@ -432,7 +438,7 @@ cenX = width/2;
 cenY = height/2;
 }
 
-
+// make sure to log everything eventually
 
 test6 = false;
 
@@ -483,7 +489,7 @@ if(test8){
 	pt = getControlPoint(xPts,yPts);
 	x = pt[0];
 	y = pt[1];
-	// just straighten 2x! 
+	// can also just straighten 2x 
 			
 			}
 	
@@ -495,9 +501,47 @@ if(test8){
 	
 	makeSelection("freeline", cleanXList1, cleanYList1);
 	run("Straighten...", "title=[Pog] line=900"); // make spline fit?
-	selectImage("Pog");
-	saveAs("Tiff", "C:/Users/13107/Downloads/test3/NAME.tif");
-	print("done"); //unused rn
+	selectImage("Pog"); // straightened version
+	
+gapXs = newArray(width);// pre allocating for size
+	for (ex = 0; ex < width; ex++) { // do longest chain non-black eventually
+	colIsBlack = evalColumn(ex,height);
+	if(colIsBlack){
+		gapXs[ex] = ex;
+		setKeyDown("shift");
+		//makePoint(ex, height/2);
+		}
+		else{
+			gapXs[ex] = 0;
+			}
+	}
+gapXs = Array.deleteValue(gapXs, 0);
+midpt = gapXs.length/2;
+//makePoint(gapXs[midpt],height/2);
+
+
+run("Duplicate...", "title=right");
+selectImage("right");
+makeRectangle(gapXs[midpt], 0, width, height);
+
+run("Crop");
+
+name = outputFolder + "right1"; 
+saveAs("Tiff", name);
+
+selectImage("Pog.tif"); // change name to left (rename)
+makeRectangle(0, 0, gapXs[midpt], height);
+
+run("Crop");
+
+name = outputFolder + "left"; 
+saveAs("Tiff", name);
+
+
+print("done");
+	
+	//saveAs("Tiff", "C:/Users/13107/Downloads/test3/NAME.tif");
+ //unused rn
 	}
 
 test7 = false;
@@ -941,8 +985,20 @@ return a;
 
 }
 
-function testLOL() { 
+function evalColumn(x,height) { 
 // function description
-a = newArray(250,250);
-return a;
+isAllBlack = true;
+for (i = 0; i < height; i++) { //height +1?
+
+v = getPixel(x,i);
+redf = (v>>16)&0xff; 
+
+if(redf != 0){
+return false; //isAllblack is false
+}
+
+}
+
+return isAllBlack;
+
 }
