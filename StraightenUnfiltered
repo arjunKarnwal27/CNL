@@ -424,17 +424,70 @@ break; // unnecessary
 macro "Measure Current Line or Test [b]"{
 //run("Measure");
 //getCursorLoc(x, y, z, flags);
+imgTest = true;
+if(imgTest){
 width = getWidth();
 height = getHeight();
 cenX = width/2;
 cenY = height/2;
+}
+
 test6 = false;
-test7 = true;
+
+test9 = false;
+if(test9){
+path = File.openDialog("choose file");
+dir = File.getParent(path);
+list = getFileList(dir);
+ print("Directory contains "+list.length+" files");
+}
+
+test8 = true;
+if(test8){
+	xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 600;
+	
+	thetaTest = 0; // will refine later ... -> start at 0 and go CW? -> need quadrants then.
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+	if(a < 150 || (a > 450)){ // neg to positive ???
+		for (i = 0; i < cenX; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	makeSelection("freeline", xPts, yPts);
+		}
+		else{
+		//thetaTest = 0;	
+		for (i = cenX; i < width; i++) {
+		//counter = 0;
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	makeSelection("freeline", xPts, yPts);
+			
+			}
+	
+		
+	}
+	print(thetaTest); //unused rn
+	}
+
+test7 = false;
 if(test7){
-xPts = newArray(width-cenX);
+xPts = newArray(width-cenX); // loop errors...
 yPts = newArray(width-cenX);
 
-numIterations = 350;
+numIterations = 300;
 
 xListUnfiltered = newArray(numIterations);
 yListUnfiltered = newArray(numIterations);
@@ -444,14 +497,19 @@ counterr = 0;
 
 for (a = 0; a < numIterations; a++) {
 	counterr=0;
-for (i = 0; i < cenX; i++) { // important one
+for (i = width; i >= cenX; i--) { // important one - currently reversed (--)
 
 xPts[counterr] = i;
 yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
 counterr = counterr + 1;
 }
 
-//makeSelection("freeline", xPts, yPts);
+
+
+
+
+makeSelection("freeline", xPts, yPts);
+
 
 foundFirst = false;
 for (b = 0; b < xPts.length-1; b++) {
@@ -495,12 +553,13 @@ xListUnfiltered[a] = avgX;
 yListUnfiltered[a] = avgY;
 
 makeSelection("freeline", xPts, yPts);
-step= PI/300;
+step= PI/300; // try increasing
 thetaTEST = thetaTEST + step;
 
 
 
 }
+
 xListUnfiltered = Array.deleteValue(xListUnfiltered, 250);
 yListUnfiltered = Array.deleteValue(yListUnfiltered, 250);
 
@@ -510,7 +569,7 @@ every = 3;
 for (u = 0; u < xListUnfiltered.length; u++) {
 	if(u % every == 0){
 	xListFiltered[u] = xListUnfiltered[u]; // doesnt work :(
-	yListFiltered[u] = yListUnfiltered[u]; // sort with reverse y ? ==
+	yListFiltered[u] = yListUnfiltered[u]; // sort with reverse y ? 
 	}
 }
 makeSelection("freeline", xListUnfiltered, yListUnfiltered);
@@ -583,7 +642,7 @@ setKeyDown("shift");
 xListUnfiltered2[a] = avgX;
 yListUnfiltered2[a] = avgY;
 
-makeSelection("freeline", xPts, yPts);
+//makeSelection("freeline", xPts, yPts);
 step= PI/300;
 thetaTEST = thetaTEST + step;
 
@@ -594,12 +653,14 @@ yListUnfiltered2 = Array.deleteValue(yListUnfiltered2, 250);
 
 //makeSelection("freeline", xListUnfiltered2, yListUnfiltered2);
 
-//run("Straighten...", "title=[Pog] line=300");
 
 xListFinal1 = Array.concat(xListUnfiltered,xListUnfiltered2);
 yListFinal1 = Array.concat(yListUnfiltered,yListUnfiltered2);
 
 makeSelection("freeline", xListFinal1, yListFinal1);
+
+//run("Straighten...", "title=[Pog] line=300");
+
 
 }
 
