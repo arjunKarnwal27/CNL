@@ -1,0 +1,860 @@
+// "StartupMacros"
+// The macros and macro tools in this file ("StartupMacros.txt") are
+// automatically installed in the Plugins>Macros submenu and
+//  in the tool bar when ImageJ starts up.
+
+//  About the drawing tools.
+//
+//  This is a set of drawing tools similar to the pencil, paintbrush,
+//  eraser and flood fill (paint bucket) tools in NIH Image. The
+//  pencil and paintbrush draw in the current foreground color
+//  and the eraser draws in the current background color. The
+//  flood fill tool fills the selected area using the foreground color.
+//  Hold down the alt key to have the pencil and paintbrush draw
+//  using the background color or to have the flood fill tool fill
+//  using the background color. Set the foreground and background
+//  colors by double-clicking on the flood fill tool or on the eye
+//  dropper tool.  Double-click on the pencil, paintbrush or eraser
+//  tool  to set the drawing width for that tool.
+//
+// Icons contributed by Tony Collins.
+
+// Global variables
+var pencilWidth=1,  eraserWidth=10, leftClick=16, alt=8;
+var brushWidth = 10; //call("ij.Prefs.get", "startup.brush", "10");
+var floodType =  "8-connected"; //call("ij.Prefs.get", "startup.flood", "8-connected");
+
+// The macro named "AutoRunAndHide" runs when ImageJ starts
+// and the file containing it is not displayed when ImageJ opens it.
+
+// macro "AutoRunAndHide" {}
+
+function UseHEFT {
+	requires("1.38f");
+	state = call("ij.io.Opener.getOpenUsingPlugins");
+	if (state=="false") {
+		setOption("OpenUsingPlugins", true);
+		showStatus("TRUE (images opened by HandleExtraFileTypes)");
+	} else {
+		setOption("OpenUsingPlugins", false);
+		showStatus("FALSE (images opened by ImageJ)");
+	}
+}
+
+UseHEFT();
+
+// The macro named "AutoRun" runs when ImageJ starts.
+
+macro "AutoRun" {
+	// run all the .ijm scripts provided in macros/AutoRun/
+	autoRunDirectory = getDirectory("imagej") + "/macros/AutoRun/";
+	if (File.isDirectory(autoRunDirectory)) {
+		list = getFileList(autoRunDirectory);
+		// make sure startup order is consistent
+		Array.sort(list);
+		for (i = 0; i < list.length; i++) {
+			if (endsWith(list[i], ".ijm")) {
+				runMacro(autoRunDirectory + list[i]);
+			}
+		}
+	}
+}
+
+var pmCmds = newMenu("Popup Menu",
+	newArray("Help...", "Rename...", "Duplicate...", "Original Scale",
+	"Paste Control...", "-", "Record...", "Capture Screen ", "Monitor Memory...",
+	"Find Commands...", "Control Panel...", "Startup Macros...", "Search..."));
+
+macro "Popup Menu" {
+	cmd = getArgument();
+	if (cmd=="Help...")
+		showMessage("About Popup Menu",
+			"To customize this menu, edit the line that starts with\n\"var pmCmds\" in ImageJ/macros/StartupMacros.txt.");
+	else
+		run(cmd);
+}
+
+macro "Abort Macro or Plugin (or press Esc key) Action Tool - CbooP51b1f5fbbf5f1b15510T5c10X" {
+	setKeyDown("Esc");
+}
+
+var xx = requires138b(); // check version at install
+function requires138b() {requires("1.38b"); return 0; }
+
+var dCmds = newMenu("Developer Menu Tool",
+newArray("ImageJ Website","News", "Documentation", "ImageJ Wiki", "Resources", "Macro Language", "Macros",
+	"Macro Functions", "Startup Macros...", "Plugins", "Source Code", "Mailing List Archives", "-", "Record...",
+	"Capture Screen ", "Monitor Memory...", "List Commands...", "Control Panel...", "Search...", "Debug Mode"));
+
+macro "Developer Menu Tool - C037T0b11DT7b09eTcb09v" {
+	cmd = getArgument();
+	if (cmd=="ImageJ Website")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/");
+	else if (cmd=="News")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/notes.html");
+	else if (cmd=="Documentation")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/docs/");
+	else if (cmd=="ImageJ Wiki")
+		run("URL...", "url=http://imagejdocu.tudor.lu/imagej-documentation-wiki/");
+	else if (cmd=="Resources")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/developer/");
+	else if (cmd=="Macro Language")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/developer/macro/macros.html");
+	else if (cmd=="Macros")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/macros/");
+	else if (cmd=="Macro Functions")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/developer/macro/functions.html");
+	else if (cmd=="Plugins")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/plugins/");
+	else if (cmd=="Source Code")
+		run("URL...", "url=http://rsbweb.nih.gov/ij/developer/source/");
+	else if (cmd=="Mailing List Archives")
+		run("URL...", "url=https://list.nih.gov/archives/imagej.html");
+	else if (cmd=="Debug Mode")
+		setOption("DebugMode", true);
+	else if (cmd!="-")
+		run(cmd);
+}
+
+var sCmds = newMenu("Stacks Menu Tool",
+	newArray("Add Slice", "Delete Slice", "Next Slice [>]", "Previous Slice [<]", "Set Slice...", "-",
+		"Convert Images to Stack", "Convert Stack to Images", "Make Montage...", "Reslice [/]...", "Z Project...",
+		"3D Project...", "Plot Z-axis Profile", "-", "Start Animation", "Stop Animation", "Animation Options...",
+		"-", "MRI Stack (528K)"));
+macro "Stacks Menu Tool - C037T0b11ST8b09tTcb09k" {
+	cmd = getArgument();
+	if (cmd!="-") run(cmd);
+}
+
+var luts = getLutMenu();
+var lCmds = newMenu("LUT Menu Tool", luts);
+macro "LUT Menu Tool - C037T0b11LT6b09UTcb09T" {
+	cmd = getArgument();
+	if (cmd!="-") run(cmd);
+}
+function getLutMenu() {
+	list = getLutList();
+	menu = newArray(16+list.length);
+	menu[0] = "Invert LUT"; menu[1] = "Apply LUT"; menu[2] = "-";
+	menu[3] = "Fire"; menu[4] = "Grays"; menu[5] = "Ice";
+	menu[6] = "Spectrum"; menu[7] = "3-3-2 RGB"; menu[8] = "Red";
+	menu[9] = "Green"; menu[10] = "Blue"; menu[11] = "Cyan";
+	menu[12] = "Magenta"; menu[13] = "Yellow"; menu[14] = "Red/Green";
+	menu[15] = "-";
+	for (i=0; i<list.length; i++)
+		menu[i+16] = list[i];
+	return menu;
+}
+
+function getLutList() {
+	lutdir = getDirectory("luts");
+	list = newArray("No LUTs in /ImageJ/luts");
+	if (!File.exists(lutdir))
+		return list;
+	rawlist = getFileList(lutdir);
+	if (rawlist.length==0)
+		return list;
+	count = 0;
+	for (i=0; i< rawlist.length; i++)
+		if (endsWith(rawlist[i], ".lut")) count++;
+	if (count==0)
+		return list;
+	list = newArray(count);
+	index = 0;
+	for (i=0; i< rawlist.length; i++) {
+		if (endsWith(rawlist[i], ".lut"))
+			list[index++] = substring(rawlist[i], 0, lengthOf(rawlist[i])-4);
+	}
+	return list;
+}
+
+macro "Pencil Tool - C037L494fL4990L90b0Lc1c3L82a4Lb58bL7c4fDb4L5a5dL6b6cD7b" {
+	getCursorLoc(x, y, z, flags);
+	if (flags&alt!=0)
+		setColorToBackgound();
+	draw(pencilWidth);
+}
+
+macro "Paintbrush Tool - C037La077Ld098L6859L4a2fL2f4fL3f99L5e9bL9b98L6888L5e8dL888c" {
+	getCursorLoc(x, y, z, flags);
+	if (flags&alt!=0)
+		setColorToBackgound();
+	draw(brushWidth);
+}
+
+macro "Flood Fill Tool -C037B21P085373b75d0L4d1aL3135L4050L6166D57D77D68La5adLb6bcD09D94" {
+	requires("1.34j");
+	setupUndo();
+	getCursorLoc(x, y, z, flags);
+	if (flags&alt!=0) setColorToBackgound();
+	floodFill(x, y, floodType);
+}
+
+function draw(width) {
+	requires("1.32g");
+	setupUndo();
+	getCursorLoc(x, y, z, flags);
+	setLineWidth(width);
+	moveTo(x,y);
+	x2=-1; y2=-1;
+	while (true) {
+		getCursorLoc(x, y, z, flags);
+		if (flags&leftClick==0) exit();
+		if (x!=x2 || y!=y2)
+			lineTo(x,y);
+		x2=x; y2 =y;
+		wait(10);
+	}
+}
+
+function setColorToBackgound() {
+	savep = getPixel(0, 0);
+	makeRectangle(0, 0, 1, 1);
+	run("Clear");
+	background = getPixel(0, 0);
+	run("Select None");
+	setPixel(0, 0, savep);
+	setColor(background);
+}
+
+// Runs when the user double-clicks on the pencil tool icon
+macro 'Pencil Tool Options...' {
+	pencilWidth = getNumber("Pencil Width (pixels):", pencilWidth);
+}
+
+// Runs when the user double-clicks on the paint brush tool icon
+macro 'Paintbrush Tool Options...' {
+	brushWidth = getNumber("Brush Width (pixels):", brushWidth);
+	call("ij.Prefs.set", "startup.brush", brushWidth);
+}
+
+// Runs when the user double-clicks on the flood fill tool icon
+macro 'Flood Fill Tool Options...' {
+	Dialog.create("Flood Fill Tool");
+	Dialog.addChoice("Flood Type:", newArray("4-connected", "8-connected"), floodType);
+	Dialog.show();
+	floodType = Dialog.getChoice();
+	call("ij.Prefs.set", "startup.flood", floodType);
+}
+
+macro "Set Drawing Color..."{
+	run("Color Picker...");
+}
+
+macro "-" {} //menu divider
+
+macro "About Startup Macros..." {
+	title = "About Startup Macros";
+	text = "Macros, such as this one, contained in a file named\n"
+		+ "'StartupMacros.txt', located in the 'macros' folder inside the\n"
+		+ "Fiji folder, are automatically installed in the Plugins>Macros\n"
+		+ "menu when Fiji starts.\n"
+		+ "\n"
+		+ "More information is available at:\n"
+		+ "<http://imagej.nih.gov/ij/developer/macro/macros.html>";
+	dummy = call("fiji.FijiTools.openEditor", title, text);
+}
+
+macro "Save As JPEG... [j]" {
+	quality = call("ij.plugin.JpegWriter.getQuality");
+	quality = getNumber("JPEG quality (0-100):", quality);
+	run("Input/Output...", "jpeg="+quality);
+	saveAs("Jpeg");
+}
+
+macro "Save Inverted FITS" {
+	run("Flip Vertically");
+	run("FITS...", "");
+	run("Flip Vertically");
+}
+
+var LeftToRight = true; // assume Left to Right first
+var radius = 8;
+
+macro "Color Picker Tool -C44f-o4499" {
+		getLine(x1, y1, x2, y2, width);
+	  if (x1==-1)
+		   exit("This macro requires a straight line selection");
+	  angle = (180.0/PI)*atan2(y1-y2, x2-x1);
+	  run("Arbitrarily...", "angle="+angle+" interpolate");
+		getCursorLoc(x, y, z, flags);
+		//makeLine(x, y, x, y+47);
+		v = getPixel(x,y);
+		testThres(x,y);
+		row = nResults;
+		setResult("X", row, x);
+		setResult("Y", row, y);
+		if (nSlices>1) setResult("Z", row, z);
+		if (bitDepth==24) {
+			red = (v>>16)&0xff;  // extract red byte (bits 23-17)
+			green = (v>>8)&0xff; // extract green byte (bits 15-8)
+			blue = v&0xff;	   // extract blue byte (bits 7-0)
+			brightness = (red + blue + green) / 3;
+			luminosity = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+			setResult("Avg9", row, getAvgNineBrightness(x,y));
+			setResult("Luminosity",row,luminosity); // same as brightness...
+			
+		} else
+			setResult("Value", row, v);
+			updateResults;
+		
+   }
+
+macro "Color Picker Tool Options" {
+   threshold = getNumber("Enter new Threshold", 8);
+   
+}
+
+function getAvgNineBrightness(x1,y1) { 
+// function description 
+self = getPixel(x1, y1);
+topLeft = getPixel(x1-1,y1-1);
+top = getPixel(x1,y1-1);
+topRight = getPixel(x1+1,y1-1);
+right = getPixel(x1+1,y1);
+botRight = getPixel(x1+1,y1+1);
+bot = getPixel(x1,y1+1);
+botLeft = getPixel(x1-1,y1+1);
+left = getPixel(x1-1,y1);
+
+return (getLuminosity(self) + getLuminosity(topLeft) + getLuminosity(top) + getLuminosity(topRight) + getLuminosity(right) + getLuminosity(botRight) + getLuminosity(bot) + getLuminosity(botLeft) + getLuminosity(left))/9;
+
+}
+
+function getLuminosity(v) { 
+// function description
+red = (v>>16)&0xff;  // extract red byte (bits 23-17)
+green = (v>>8)&0xff; // extract green byte (bits 15-8)
+blue = v&0xff;	   // extract blue byte (bits 7-0)
+luminosity1 = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+
+return luminosity1;
+}
+
+function getLum2(x,y) { 
+// function description
+return getPixel(x, y);
+}
+
+var threshold = 6.5;
+
+function testThres(startX, startY){ // option A - no list, just checking previous pixel
+	botY = startY + 80; // currently going top-down
+	for (i = startY; i < botY; i++) {
+		//setKeyDown("shift");
+		//makePoint(startX,i);
+		currLuminosity  = getAvgNineBrightness(startX,i);
+		nextLuminosity = getAvgNineBrightness(startX,i+1); // going down 1
+		//curr = getPixel(startX,i);
+		//currLuminosity  = getLuminosity(v);
+		//next = getPixel(startX,i+1);
+		//nextLuminosity = getLuminosity(next); // going down 1
+		
+		
+		
+		if(Math.abs(currLuminosity - nextLuminosity) > threshold){
+			setKeyDown("shift");
+			makePoint(startX, i, "small yellow dot add"); //  small --> tiny for even smaller
+		}
+	}
+}
+
+
+function getLocalThreshold(x,y) { 
+// function description
+
+}
+
+macro "Auto500 Tool - Cf20505T0913AT99135" {
+   getCursorLoc(x, y, z, flags);
+   //run("Set Scale...", "distance=51 known=200 unit=um");
+   //len = 500; //scaled version (not in pixels)
+   //toUnscaled(len); // convert to pixels
+   
+   makeOval(x-radius, y-radius, radius*2, radius*2);
+   roiManager("show all without labels");
+   
+   
+}
+
+macro "Auto500 Tool Options" {
+   run("Set Scale...", "distance=51 known=200 unit=um");
+   LeftToRight = getBoolean("Choose Direction", "Left to Right", "Right to Left");
+   
+}
+
+macro "Auto Update StartUp [q]" {
+run("Install...", "install=C:/Users/13107/Downloads/fiji-win64/Fiji.app/macros/StartupMacros.fiji.ijm");
+//call("trainableSegmentation.Weka_Segmentation.addTrace", "0", "1");
+//roiManager("show all without labels");
+test = false;
+if(test){
+
+
+setTool("Auto500 Tool");
+//open("C:/Users/13107/Downloads/test3.JPG");
+	//selectImage("test3.JPG");
+//run("Split Channels");
+roiManager("show all without labels");
+n = roiManager('count');
+for (i = 0; i < n; i++) {
+//selectImage("t2.png");
+	roiManager('select', i);
+	sum = 0;
+	Roi.getContainedPoints(xpoints, ypoints);
+	for (a = 0; a < xpoints.length; a++){
+	xVal = xpoints[a];
+	yVal = ypoints[a];
+	if(getLum2(xVal,yVal) < 56){
+	Roi.setStrokeColor(0, 0, 255);
+break; // unnecessary
+	}
+	sum = sum + getLum2(xVal,yVal);
+	
+	}
+	avg = sum / xpoints.length;
+	if(avg < 90){
+	Roi.setStrokeColor(255, 255 , 1);
+	}
+	// process roi here
+}
+}
+}
+
+macro "Measure Current Line or Test [b]"{
+//run("Measure");
+//getCursorLoc(x, y, z, flags);
+imgTest = false;
+if(imgTest){
+width = getWidth();
+height = getHeight();
+cenX = width/2;
+cenY = height/2;
+}
+
+test6 = false;
+
+test9 = true;
+if(test9){
+path = File.openDialog("choose file");
+dir = File.getParent(path);
+list = getFileList(dir);
+ print("Directory contains "+list.length+" files");
+}
+
+test8 = false;
+if(test8){
+	xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 300;
+	
+	thetaTest = 0;
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+		for (i = 0; i < width; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+	makeSelection("freeline", xPts, yPts);
+	}
+	
+	}
+
+test7 = false;
+if(test7){
+xPts = newArray(width-cenX); // loop errors...
+yPts = newArray(width-cenX);
+
+numIterations = 300;
+
+xListUnfiltered = newArray(numIterations);
+yListUnfiltered = newArray(numIterations);
+
+thetaTEST = 0;
+counterr = 0;
+
+for (a = 0; a < numIterations; a++) {
+	counterr=0;
+for (i = width; i >= cenX; i--) { // important one - currently reversed (--)
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
+counterr = counterr + 1;
+}
+
+
+
+
+
+makeSelection("freeline", xPts, yPts);
+
+
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+//makePoint(avgX,avgY);
+
+xListUnfiltered[a] = avgX;
+yListUnfiltered[a] = avgY;
+
+makeSelection("freeline", xPts, yPts);
+step= PI/300; // try increasing
+thetaTEST = thetaTEST + step;
+
+
+
+}
+
+xListUnfiltered = Array.deleteValue(xListUnfiltered, 250);
+yListUnfiltered = Array.deleteValue(yListUnfiltered, 250);
+
+xListFiltered = newArray(xListUnfiltered.length/3);
+yListFiltered = newArray(yListUnfiltered.length/3);
+every = 3;
+for (u = 0; u < xListUnfiltered.length; u++) {
+	if(u % every == 0){
+	xListFiltered[u] = xListUnfiltered[u]; // doesnt work :(
+	yListFiltered[u] = yListUnfiltered[u]; // sort with reverse y ? 
+	}
+}
+makeSelection("freeline", xListUnfiltered, yListUnfiltered);
+
+//run("Straighten...", "title=[Pog] line=300");
+
+//JFEIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+// iteration 2 -> bounds of angle loop changed to accomodate 360 without double length line
+xPts = newArray(width-cenX);
+yPts = newArray(width-cenX);
+
+numIterations = 350;
+
+xListUnfiltered2 = newArray(numIterations);
+yListUnfiltered2 = newArray(numIterations);
+
+thetaTEST = 0;
+counterr = 0;
+
+for (a = 0; a < numIterations; a++) {
+	counterr=0;
+for (i = cenX; i < width; i++) { // important one
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // auto line width 
+counterr = counterr + 1;
+}
+
+//makeSelection("freeline", xPts, yPts);
+
+foundFirst = false;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+redf = (v>>16)&0xff; 
+yRn = round(yPts[b+1]);
+vNext = getPixel(xPts[b+1], yRn);
+redlast = (vNext>>16)&0xff; 
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(redf != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	}// test if 8-bit runs faster ?
+	}
+	
+	if(foundFirst){
+	if(redlast == 0){
+	lX = xPts[b+1];
+	lY = yRn;
+	break; // is black
+	}
+	
+	}
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+//makePoint(avgX,avgY);
+
+xListUnfiltered2[a] = avgX;
+yListUnfiltered2[a] = avgY;
+
+//makeSelection("freeline", xPts, yPts);
+step= PI/300;
+thetaTEST = thetaTEST + step;
+
+}
+xListUnfiltered2 = Array.deleteValue(xListUnfiltered2, 250);
+yListUnfiltered2 = Array.deleteValue(yListUnfiltered2, 250);
+
+
+//makeSelection("freeline", xListUnfiltered2, yListUnfiltered2);
+
+
+xListFinal1 = Array.concat(xListUnfiltered,xListUnfiltered2);
+yListFinal1 = Array.concat(yListUnfiltered,yListUnfiltered2);
+
+makeSelection("freeline", xListFinal1, yListFinal1);
+
+//run("Straighten...", "title=[Pog] line=300");
+
+
+}
+
+
+
+test3 = false;
+if(test3){
+	
+setOption("ScaleConversions", true);
+run("8-bit");
+run("Red/Green");
+for (i = 0; i < 7; i++) { // check color histogram probably... -
+run("Smooth");
+
+}
+
+
+}
+
+
+if(test6){
+makePoint(cenX+100,cenY);
+//wait(500);
+
+xPts = newArray(width-cenX);
+yPts = newArray(width-cenX);
+
+thetaTEST = 0;
+counterr = 0;
+wX = newArray(0);
+wY = newArray(0);
+for (a = 0; a < 100; a++) {
+	counterr=0;
+for (i = cenX; i < width; i++) {
+
+xPts[counterr] = i;
+yPts[counterr] = tan(thetaTEST) * (i-cenX) + cenY; // check theta to change negative
+counterr = counterr + 1;
+}
+
+//makeSelection("freeline", xPts, yPts);
+
+
+c11 = 0;
+for (b = 0; b < xPts.length-1; b++) {
+yR = round(yPts[b]);
+yRn = round(yPts[b+1]);
+val = getPixel(xPts[b],yR);
+nextPix = getPixel(xPts[b+1],yRn); // x always whole # 
+if(val < 129 && nextPix > 129){ // val < 129 - is red, and > 129, next not red
+setKeyDown("shift");
+//makePoint(xPts[b], yR);
+c11 = c11 +1;
+wX = Array.concat(wX,xPts[b]);
+wY = Array.concat(wY,yR);
+break;
+
+}
+
+}
+
+
+
+step = PI / 300;
+thetaTEST = thetaTEST + step;
+//wait(50);
+}
+makeSelection("polyline", wX, wY);
+wait(500);
+//run("Straighten...", "title=[Pog] line=35");
+oXmin = 0;
+  oXmax = getWidth();
+  oYmin = 0;
+  oYmax = getHeight();
+  // select new image here
+  selectImage("Ep150-1M0602-OD3_001.svs - Series 3");
+  newXmin = 0;
+  newXmax = getWidth();
+  newYmin = 0;
+  newYmax = getHeight(); // filter list for every few pts
+newXs = changeCords(wX, oXmin, oXmax, newXmin, newXmax);
+newYs = changeCords(wY, oYmin, oYmax, newYmin, newYmax);
+fXs = newArray(0);
+fYs = newArray(0);
+gap = 10;
+for (p = 0; p < newXs.length; p++) {
+if(p % gap == 0){
+fXs = Array.concat(fXs,newXs[p]);
+fYs = Array.concat(fYs,newYs[p]);
+}
+
+}
+makeSelection("polyline", fXs, fYs);
+// straighten !
+run("Straighten...", "title=[Pog] line=100");
+
+
+}
+
+//makeSelection("polygon", newArray(0,0,100,100), newArray(100,200,100,200));
+//call("trainableSegmentation.Weka_Segmentation.addTrace", "1", "1");
+	test4 = false;
+	if(test4){
+		
+	
+	Roi.getCoordinates(xpoints, ypoints); // for original ROI/selection
+  	//selectImage("Ep150-1M0602-OD3_001.svs - Series 3");
+  //makeSelection("polyline", xpoints, ypoints);
+  
+  newXVals = newArray(xpoints.length);
+  newYVals = newArray(xpoints.length);
+  
+  oXmin = 0;
+  oXmax = getWidth();
+  oYmin = 0;
+  oYmax = getHeight();
+  // select new image here
+  selectImage("Ep150-1M0602-OD3_001.svs - Series 2");
+  newXmin = 0;
+  newXmax = getWidth();
+  newYmin = 0;
+  newYmax = getHeight();
+  
+  for (i = 0; i < xpoints.length; i++) {
+  xVal = xpoints[i];
+  yVal = ypoints[i];
+  newXVals[i] = interp1(xVal,  oXmin,  oXmax,  newXmin,  newXmax);
+  newYVals[i] = interp1(yVal, oYmin, oYmax, newYmin, newYmax);
+  
+  }
+  
+  makeSelection("freeline", newXVals, newYVals);
+  
+  }
+
+
+
+}
+
+test2 = false; // nvm...
+//makeRectangle(800,700, 10, 100);
+
+if(test2){
+	Roi.getCoordinates(xpoints, ypoints); // do error message at some point
+	firstX = xpoints[0];
+	lastX = xpoints[xpoints.length-1];
+	minX = lastX;
+	minIsLast = true;
+	if(firstX < lastX){
+		minX = firstX;
+		minIsLast = false;
+	}
+	
+	//makePoint(xpoints[0],ypoints[0]);
+	//makeLine(minX,0,minX,getHeight());
+	//makeLine(minX,0,getWidth(),0);
+	makeRectangle(minX,0,getWidth()-minX,getHeight());
+	run("Crop");
+	
+	makeLine(xpoints,ypoints);
+	if(minIsLast){
+		
+		
+		//makeRectangle(minX, ypoints[0], getWidth()-minX, getHeight()-ypoints[0]);   // assuming top down for now
+	}
+	//makeRectangle(minX, y, width, height);
+	//makePoint(lastX, ypoints[1]);
+}
+
+test = false;
+if(test){
+
+
+open("C:/Users/13107/Downloads/cellsToCount.png");
+open("C:/Users/13107/Downloads/cellsToCount.png");
+run("8-bit");
+setOption("BlackBackground", true);
+run("Convert to Mask");
+run("Invert LUTs");
+run("Watershed");
+//run("Analyze Particles...", "  show=Outlines display clear include summarize add");
+//run("Analye Particles...", "show=Outlines display ");
+run("Analyze Particles...", "size=100-600 show=Outlines display clear include summarize add");
+//makePoint(x, y);
+//makeLine(x, y, getWidth(), y);
+//for (i = x; i < getWidth(); i++) {
+//testThres(i,y);
+//}
+//setKeyDown("shift"); // necessary for every point, unless makeSelection()...
+// auto update...
+  //makePoint(90, 161, "small red cross add");
+//makePoint(x+60, y+60,"small red dot add label");
+//setKeyDown("shift");
+//makePoint(x+60, y);
+}
+}
+}
+}
+
+function interp1( x,  in_min,  in_max,  out_min,  out_max) { 
+// function description - arduino map command 
+
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+function changeCords(xListOriginal, prevMin, prevMax, newMin, newMax){
+finalList = newArray(xListOriginal.length); // size things
+for (i = 0; i < xListOriginal.length; i++) {
+val = xListOriginal[i];
+newVal = interp1(val, prevMin, prevMax, newMin, newMax);
+finalList[i] = newVal;
+}
+
+
+return finalList;
+}
+
