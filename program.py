@@ -127,28 +127,33 @@ def process_straightened_files(initial_count, output_dir):
                     print(file_path)
                     image = cv2.imread(file_path)
                     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    print(file_path)
+
                     # Convert the image to HSV color space
                     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
                     blurred = cv2.GaussianBlur(hsv, (301, 3), 0)
 
                     # Define the range for dark purple and light purple in HSV
+                    # Convert provided RGB to HSV
                     dark_purple_rgb = np.uint8([[[34, 22, 63]]])
                     dark_purple_hsv = cv2.cvtColor(dark_purple_rgb, cv2.COLOR_RGB2HSV)[0][0]
 
                     # Define HSV ranges (with some tolerance)
-                    lower_dark_purple = np.array([dark_purple_hsv[0] - 10, 50, 50])
-                    upper_dark_purple = np.array([dark_purple_hsv[0] + 3, 200, 200])
+                    lower_dark_purple = np.array([dark_purple_hsv[0] - 10, 50, 50]) 
+                    upper_dark_purple = np.array([dark_purple_hsv[0] + 3, 200, 200]) # out of 255
+                    # opencv uses 179 255 255
+                    # actual is 360 100 100
 
-                    # Create masks for dark purple regions
+                    # Create masks for dark purple and light purple regions
                     mask_dark_purple = cv2.inRange(blurred, lower_dark_purple, upper_dark_purple)
 
-                    kernel = np.ones((3, 3), np.uint8)
+                    kernel = np.ones((3, 3), np.uint8)  # Adjust the kernel size as needed
                     dilated_dark_mask = cv2.dilate(mask_dark_purple, kernel, iterations=1)
-
+                    cv2.imwrite('dilated_dark_mask.png', dilated_dark_mask)
                     # Find contours in the masks
                     contours_dark_purple, _ = cv2.findContours(dilated_dark_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
                     contours_dark_purple = sorted(contours_dark_purple, key=cv2.contourArea, reverse=True)
+
                     num_contours_to_keep = 1
                     largest_contours_dark_purple = contours_dark_purple[:num_contours_to_keep]
 
@@ -167,23 +172,22 @@ def process_straightened_files(initial_count, output_dir):
                     dilated_mask = cv2.dilate(mask, kernel, iterations=1)
 
                     mask_inv = cv2.bitwise_not(dilated_mask)
-
-                    contours_dark_purple, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                    contours_dark_purple = sorted(contours_dark_purple, key=cv2.contourArea, reverse=True)
-                    largest_contours_dark_purple = contours_dark_purple[:num_contours_to_keep]
-
-                    mask2 = np.zeros_like(dilated_dark_mask)
-
-                    # Draw the largest contour on the mask
-                    cv2.drawContours(mask2, largest_contours_dark_purple, -1, (255), thickness=cv2.FILLED)
-
-                    kernel = np.ones((35, 35), np.uint8)
-                    dilated_mask2 = cv2.dilate(mask2, kernel, iterations=1)
-
-                    image_no_largest_contour = cv2.bitwise_and(image_rgb, image_rgb, mask=dilated_mask2)
+                    cv2.imwrite('mask_inv.png', mask_inv)
 
                     # Apply the dilated mask to the image
                     result = cv2.bitwise_and(image_rgb, image_rgb, mask=dilated_mask)
+
+                    # Calculate average y-coordinate of non-zero pixels in result
+                    non_zero_indices = np.nonzero(dilated_mask)
+                    average_y = int(np.mean(non_zero_indices[0]))
+                    print(average_y)
+
+                    # Create a mask to exclude pixels below average_y
+                    mask_above_average_y = mask_inv
+                    mask_above_average_y[average_y:, :] = 0  # Mask pixels below average_y
+                    # Apply the mask to image_rgb to get image_no_largest_contour
+                    image_no_largest_contour = cv2.bitwise_and(image_rgb, image_rgb, mask=mask_above_average_y)
+
                     contour_center_y = np.mean([point[0][1] for point in largest_contours_dark_purple[0]])
 
                     image_height = image.shape[0]
