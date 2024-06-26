@@ -495,9 +495,9 @@ for (i = 0; i < xP.length; i++) {
 
 // shortcut!
 if(xP.length == 4){
-	makePoint((xP[1]+xP[2])/2, height/2);
+	//makePoint((xP[1]+xP[2])/2, height/2);
 	}
-
+// else ...
 // post analysis - odd -1 for now
 longestDiff = 0;
 secondLongestDiff = 0;
@@ -508,8 +508,10 @@ diff = xP[i] - xP[i-1];
 
 if(diff > longestDiff){
 	secondLongestDiff = longestDiff;
+	gH[2] = gH[0];
+	gH[3] = gH[1];
 	longestDiff = diff;
-	gH[0] = xP[i];
+	gH[0] = xP[i]; // getting overwritten ...
 	gH[1] = xP[i-1];
 	}
 	else if(diff > secondLongestDiff){
@@ -522,11 +524,11 @@ if(diff > longestDiff){
 print(longestDiff);
 print(secondLongestDiff);
 for (i = 0; i < gH.length; i++) {
-//print(gH[i]);
+print(gH[i]);
 }
 gH2 = Array.sort(gH);
-//makePoint(gH2[1], height/2);
-print("done1");
+makePoint((gH2[1]+gH2[2])/2, height/2);
+print("done10");
 
 // make sure to log everything eventually
 
