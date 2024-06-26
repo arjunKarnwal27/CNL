@@ -424,13 +424,8 @@ break; // unnecessary
 macro "Measure Current Line or Test [b]"{
 //run("Measure");
 //getCursorLoc(x, y, z, flags);
-imgTest = true;
 
-inputFolder = getDir("Choose Input Folder");
-outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
-list = getFileList(b);
-
-
+imgTest = false;
 if(imgTest){
 width = getWidth();
 height = getHeight();
@@ -438,17 +433,313 @@ cenX = width/2;
 cenY = height/2;
 }
 
+
+inputFolder = getDir("Choose Input Folder");
+outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
+
+numPics = 2; // Number of SVS to analyze in a given session - can change to see a .txt file later ...
+enoughFiles = false;
+print("Waiting for " + numPics + " files... ");
+
+while(!enoughFiles){
+list = getFileList(inputFolder);
+if(numPics == list.length){
+	print("Files found! Beginning Process");
+	enoughFiles = true;
+	}		
+}
+
+
+
+
+for (image = 0; image < list.length; image++) { // for ever svs...
+	
+LeftRightfolder = outputFolder + File.separator + list[image] + "PICS";	
+
+File.makeDirectory(LeftRightfolder);
+
+// run process, save left and right files to ^ every time 
+
+// pt 1 - straighten
+open(inputFolder + list[image]); // need file seperator?
+
+width = getWidth();
+height = getHeight();
+cenX = width/2;
+cenY = height/2;
+xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 600;
+	fListX = newArray(numIterations);
+	fListY = newArray(numIterations);
+	thetaTest = 0; // will refine later ...
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+	if(a < 150 || (a > 450)){ // neg to positive ???
+		for (i = 0; i < cenX; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+		}
+		else{
+		//thetaTest = 0;	
+		for (i = cenX; i < width; i++) {
+		//counter = 0;
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+	// can also just straighten 2x 
+			
+			}
+	
+	fListX[a] = x;
+	fListY[a] = y;
+	}
+	cleanXList1 = Array.deleteValue(fListX, 250);
+	cleanYList1 = Array.deleteValue(fListY, 250);
+	
+	makeSelection("freeline", cleanXList1, cleanYList1);
+	run("Straighten...", "title=[Pog] line=900"); // make spline fit?
+	selectImage("Pog");
+	
+	
+
+	print("Straighten complete for " + list[image]);
+	// pt 2 - crop and save
+	width = getWidth();
+	height = getHeight();
+	
+	xP = newArray(width);
+coun = 0;
+firstColIsBlack = evalColumn(0,height);
+inLoop = false;
+if(!firstColIsBlack){ // slightly untested
+	inLoop = true;
+	startVal = 0;
+	xP[0] = startVal;
+	}
+	else{
+		xP[0] = -1;
+		}
+for (x = 1; x < width; x++) { 
+
+	 // first is non black
+		// searching for first black
+		
+		colIsBlaeck = evalColumn(x,height);
+		
+		if(inLoop){ //searching for first black one (end sequence)
+			if(colIsBlaeck){
+				coun = coun + 1;
+			xP[x] = (x-1);
+			inLoop = false;
+				}
+				else{
+					xP[x] = -1;
+					}
+				
+			}
+			else{ // not in loop, looking for first non black (start sequence)
+				if(!colIsBlaeck){
+					coun = coun + 1;
+					xP[x] = x;
+					inLoop = true;
+					}
+					else{
+						xP[x] = -1;
+						}
+				} 
+		
+		
+}
+
+if(inLoop){ // ended while in loop
+	xP = Array.concat(xP,width);
+	}
+	
+xP = Array.deleteValue(xP, -1);
+
+// shortcut!
+if(xP.length == 4){
+	//makePoint((xP[1]+xP[2])/2, height/2);
+	}
+// else ...
+// post analysis - odd -1 for now
+longestDiff = 0;
+secondLongestDiff = 0;
+gH = newArray(0,0,0,0);
+for (i = 1; i < xP.length; i = i + 2) {
+diff = xP[i] - xP[i-1];
+
+
+if(diff > longestDiff){
+	secondLongestDiff = longestDiff;
+	gH[2] = gH[0];
+	gH[3] = gH[1];
+	longestDiff = diff;
+	gH[0] = xP[i]; // getting overwritten ...
+	gH[1] = xP[i-1];
+	}
+	else if(diff > secondLongestDiff){
+		secondLongestDiff = diff;
+    gH[2] = xP[i];
+	gH[3] = xP[i-1];
+		}
+
+}
+
+gH2 = Array.sort(gH);
+
+midPT = (gH[1] + gH[2])/2;
+
+
+run("Duplicate...", "title=right");
+selectImage("right");
+makeRectangle(midPT, 0, width, height);
+
+
+
+run("Crop");
+
+
+
+name = LeftRightfolder + File.separator + "right" + list[image] ; 
+saveAs("Tiff", name);
+
+selectImage("Pog"); // change name to left (rename)
+makeRectangle(0, 0, midPT, height);
+
+run("Crop");
+
+name = LeftRightfolder + File.separator + "left" + list[image]; 
+saveAs("Tiff", name);
+
+
+print("done cropping");
+
+//saveAs("Tiff", LeftRightfolder + File.separator + "left" + list[image]);
+
+}
+
+
+//saveAs("Tiff", folder2 + File.separator + "left" + list[1]);
+
+
+
+
+
+
+test10 = false;
+if(test10){
+xP = newArray(width);
+coun = 0;
+firstColIsBlack = evalColumn(0,height);
+inLoop = false;
+if(!firstColIsBlack){ // slightly untested
+	inLoop = true;
+	startVal = 0;
+	xP[0] = startVal;
+	}
+	else{
+		xP[0] = -1;
+		}
+for (x = 1; x < width; x++) { 
+
+	 // first is non black
+		// searching for first black
+		
+		colIsBlaeck = evalColumn(x,height);
+		
+		if(inLoop){ //searching for first black one (end sequence)
+			if(colIsBlaeck){
+				coun = coun + 1;
+			xP[x] = (x-1);
+			inLoop = false;
+				}
+				else{
+					xP[x] = -1;
+					}
+				
+			}
+			else{ // not in loop, looking for first non black (start sequence)
+				if(!colIsBlaeck){
+					coun = coun + 1;
+					xP[x] = x;
+					inLoop = true;
+					}
+					else{
+						xP[x] = -1;
+						}
+				} 
+		
+		
+}
+
+if(inLoop){ // ended while in loop
+	xP = Array.concat(xP,width);
+	}
+	
+xP = Array.deleteValue(xP, -1);
+for (i = 0; i < xP.length; i++) {
+//print(xP[i]);
+}
+
+// shortcut!
+if(xP.length == 4){
+	//makePoint((xP[1]+xP[2])/2, height/2);
+	}
+// else ...
+// post analysis - odd -1 for now
+longestDiff = 0;
+secondLongestDiff = 0;
+gH = newArray(0,0,0,0);
+for (i = 1; i < xP.length; i = i + 2) {
+diff = xP[i] - xP[i-1];
+
+
+if(diff > longestDiff){
+	secondLongestDiff = longestDiff;
+	gH[2] = gH[0];
+	gH[3] = gH[1];
+	longestDiff = diff;
+	gH[0] = xP[i]; // getting overwritten ...
+	gH[1] = xP[i-1];
+	}
+	else if(diff > secondLongestDiff){
+		secondLongestDiff = diff;
+    gH[2] = xP[i];
+	gH[3] = xP[i-1];
+		}
+
+}
+print(longestDiff);
+print(secondLongestDiff);
+for (i = 0; i < gH.length; i++) {
+print(gH[i]);
+}
+gH2 = Array.sort(gH);
+makePoint((gH2[1]+gH2[2])/2, height/2);
+print("done10");
+}
 // make sure to log everything eventually
 
 test6 = false;
-
-test9 = false;
-if(test9){
-path = File.openDialog("choose file");
-dir = File.getParent(path);
-list = getFileList(dir);
- print("Directory contains "+list.length+" files");
-}
 
 test8 = false;
 if(test8){
@@ -503,20 +794,6 @@ if(test8){
 	run("Straighten...", "title=[Pog] line=900"); // make spline fit?
 	selectImage("Pog"); // straightened version
 	
-gapXs = newArray(width);// pre allocating for size
-	for (ex = 0; ex < width; ex++) { // do longest chain non-black eventually
-	colIsBlack = evalColumn(ex,height);
-	if(colIsBlack){
-		gapXs[ex] = ex;
-		setKeyDown("shift");
-		//makePoint(ex, height/2);
-		}
-		else{
-			gapXs[ex] = 0;
-			}
-	}
-gapXs = Array.deleteValue(gapXs, 0);
-midpt = gapXs.length/2;
 //makePoint(gapXs[midpt],height/2);
 
 
@@ -534,7 +811,7 @@ makeRectangle(0, 0, gapXs[midpt], height);
 
 run("Crop");
 
-name = outputFolder + "left"; 
+name = outputFolder + "left1"; 
 saveAs("Tiff", name);
 
 
@@ -985,7 +1262,7 @@ return a;
 
 }
 
-function evalColumn(x,height) { 
+function evalColumn(x,height) { // returns false if there is a non black, true if all black
 // function description
 isAllBlack = true;
 for (i = 0; i < height; i++) { //height +1?
@@ -1002,3 +1279,5 @@ return false; //isAllblack is false
 return isAllBlack;
 
 }
+
+
