@@ -181,17 +181,24 @@ def process_straightened_files(initial_count, output_dir):
                     non_zero_indices = np.nonzero(dilated_mask)
                     average_y = int(np.mean(non_zero_indices[0]))
                     print(average_y)
+                    height, _ = image_rgb.shape[:2]
+                    middle_y = height // 2
 
                     # Create a mask to exclude pixels below average_y
                     mask_above_average_y = mask_inv
-                    mask_above_average_y[average_y:, :] = 0  # Mask pixels below average_y
+                    if average_y < middle_y:
+                        # Remove above average_y
+                        mask_above_average_y[:average_y, :] = 0
+                    else:
+                        # Remove below average_y
+                        mask_above_average_y[average_y:, :] = 0
                     # Apply the mask to image_rgb to get image_no_largest_contour
                     image_no_largest_contour = cv2.bitwise_and(image_rgb, image_rgb, mask=mask_above_average_y)
 
                     contour_center_y = np.mean([point[0][1] for point in largest_contours_dark_purple[0]])
 
                     image_height = image.shape[0]
-                    if contour_center_y < image_height / 2:
+                    if contour_center_y > image_height / 2:
                         # Contour is in the upper half, so it's ONL
                         output_path_onl = os.path.join(output_dir, f'result_ONL_{filename}')
                         output_path_inl = os.path.join(output_dir, f'result_INL_{filename}')
