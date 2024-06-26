@@ -426,13 +426,25 @@ macro "Measure Current Line or Test [b]"{
 //getCursorLoc(x, y, z, flags);
 
 
-//inputFolder = getDir("Choose Input Folder");
-//outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
+inputFolder = getDir("Choose Input Folder");
+outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
+list = getFileList(inputFolder);
+for (i = 0; i < list.length; i++) {
+//print(list[i]);
+
+folder2 = outputFolder + File.separator + "right" + list[i];	
+
+File.makeDirectory(folder2);
+
+}
+
+
+saveAs("Tiff", folder2 + File.separator + "left" + list[1]);
 
 
 
 
-imgTest = true;
+imgTest = false;
 if(imgTest){
 width = getWidth();
 height = getHeight();
@@ -440,6 +452,8 @@ cenX = width/2;
 cenY = height/2;
 }
 
+test10 = false;
+if(test10){
 xP = newArray(width);
 coun = 0;
 firstColIsBlack = evalColumn(0,height);
@@ -529,7 +543,7 @@ print(gH[i]);
 gH2 = Array.sort(gH);
 makePoint((gH2[1]+gH2[2])/2, height/2);
 print("done10");
-
+}
 // make sure to log everything eventually
 
 test6 = false;
