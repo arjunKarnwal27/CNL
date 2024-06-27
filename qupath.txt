@@ -37,3 +37,23 @@ boolean isRegionFullyBlack(PathDetectionObject detection) {
 def detections = getDetectionObjects()
 def toRemove = detections.findAll { isRegionFullyBlack(it) }
 removeObjects(toRemove, true)
+
+def saveDetectionsToFile(detections, fileName) {
+    def file = new File(fileName)
+    file.withWriter { writer ->
+        detections.each { detection ->
+            def roi = detection.getROI()
+            def centerX = roi.getBoundsX() + roi.getBoundsWidth() / 2
+            def centerY = roi.getBoundsY() + roi.getBoundsHeight() / 2
+            writer.writeLine("Detection at (${centerX}, ${centerY})")
+        }
+    }
+}
+
+def homeDir = System.getProperty("user.home")
+def desktopPath = homeDir + "/Desktop/detections.txt"
+
+def remainingDetections = getDetectionObjects()
+saveDetectionsToFile(remainingDetections, desktopPath)
+
+println "Detections saved to ${desktopPath}"
