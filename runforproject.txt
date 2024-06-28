@@ -1,0 +1,58 @@
+import qupath.lib.objects.PathDetectionObject
+import qupath.lib.objects.classes.PathClassFactory
+import qupath.lib.images.servers.PixelType
+import qupath.lib.regions.RegionRequest
+import qupath.lib.roi.ROIs
+import java.awt.Color
+import java.awt.image.BufferedImage
+import qupath.lib.scripting.QP
+import qupath.lib.analysis.stats.Histogram
+import qupath.lib.gui.charts.HistogramDisplay
+
+createFullImageAnnotation(true)
+
+def result = runPlugin('qupath.opencv.CellCountsCV', '{"gaussianSigmaPixels":3.5,"backgroundRadiusPixels":80.0,"doDoG":true,"threshold":1.0,"ensureMainStain":false,"detectionDiameter":1.0}')
+
+// Function to check if a region is fully black
+boolean isRegionFullyBlack(PathDetectionObject detection) {
+    def server = getCurrentImageData().getServer()
+    def roi = detection.getROI()
+    def request = RegionRequest.createInstance(server.getPath(), 1, roi)
+    def img = server.readBufferedImage(request)
+
+    int width = img.getWidth()
+    int height = img.getHeight()
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            def color = new Color(img.getRGB(x, y))
+            if (color.getRed() != 0 || color.getGreen() != 0 || color.getBlue() != 0) {
+                return false // Found a non-black pixel
+            }
+        }
+    }
+    return true // All pixels are black
+}
+
+// Remove detections with a fully black background
+def detections = getDetectionObjects()
+def toRemove = detections.findAll { isRegionFullyBlack(it) }
+removeObjects(toRemove, true)
+
+def saveDetectionsToFile(detections, fileName) {
+    def file = new File(fileName)
+    file.withWriter { writer ->
+        detections.each { detection ->
+            def roi = detection.getROI()
+            def centerX = roi.getBoundsX() + roi.getBoundsWidth() / 2
+            def centerY = roi.getBoundsY() + roi.getBoundsHeight() / 2
+            writer.writeLine("Detection at (${centerX}, ${centerY})")
+        }
+    }
+
+}
+def imageName = getCurrentImageData().getServer().getMetadata().getName().replaceAll("[^a-zA-Z0-9]", "_")
+def desktopPath = System.getProperty("user.home") + "/Desktop/detections_" + imageName + ".txt"
+def remainingDetections = getDetectionObjects()
+saveDetectionsToFile(remainingDetections, desktopPath)
+
+println "Detections saved to ${desktopPath}"
