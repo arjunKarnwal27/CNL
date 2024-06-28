@@ -1,0 +1,122 @@
+import groovy.io.FileType
+import java.awt.image.BufferedImage
+import qupath.lib.images.servers.ImageServerProvider
+import qupath.lib.gui.commands.ProjectCommands
+import qupath.lib.objects.PathDetectionObject
+import qupath.lib.objects.classes.PathClassFactory
+import qupath.lib.images.servers.PixelType
+import qupath.lib.regions.RegionRequest
+import qupath.lib.roi.ROIs
+import java.awt.Color
+import java.awt.image.BufferedImage
+import qupath.lib.scripting.QP
+import qupath.lib.analysis.stats.Histogram
+import qupath.lib.gui.charts.HistogramDisplay
+
+def homeDir = System.getProperty("user.home")
+def documentPath = homeDir + "/Documents/output2"
+def project = getProject()
+def files = new File(documentPath).listFiles()
+
+if (files == null) {
+    println "No files found in directory: " + desktopPath
+    return
+}
+
+for (file in files) {
+    if (!file.isFile()) {
+        continue // Skip if not a file
+    }
+
+    def fileName = file.getName().toLowerCase()
+    if (!(fileName.endsWith(".tif") || fileName.endsWith(".jpg") || fileName.endsWith(".png"))) {
+        println "Skipping non-image file: " + fileName
+        continue // Skip if not an image file
+    }
+
+    try {
+        def imagePath = file.getCanonicalPath()
+        def support = ImageServerProvider.getPreferredUriImageSupport(BufferedImage.class, imagePath)
+
+        if (support == null) {
+            println "No support found for image: " + imagePath
+            continue
+        }
+
+        def builder = support.builders.get(0)
+        def entry = project.addImage(builder)
+        
+        // Set a particular image type
+        def imageData = entry.readImageData()
+        imageData.setImageType(ImageData.ImageType.BRIGHTFIELD_H_DAB)
+        entry.saveImageData(imageData)
+        
+        // Write a thumbnail if we can
+        var img = ProjectCommands.getThumbnailRGB(imageData.getServer())
+        entry.setThumbnail(img)
+        
+        // Add an entry name (the filename)
+        entry.setImageName(file.getName())
+        
+        createFullImageAnnotation(imageData, true)
+    
+        // Run the cell detection plugin
+        def result = runPlugin('qupath.opencv.CellCountsCV', '{"gaussianSigmaPixels":3.5,"backgroundRadiusPixels":80.0,"doDoG":true,"threshold":1.0,"ensureMainStain":false,"detectionDiameter":1.0}')
+        
+        // Remove detections with a fully black background
+        def detections = getDetectionObjects()
+        def toRemove = detections.findAll { isRegionFullyBlack(it) }
+        removeObjects(toRemove, true)
+        
+        // Save the remaining detections to a file
+        def desktopPath = homeDir + "/Desktop/detections_" + entry.getImageName().replaceAll("[^a-zA-Z0-9]", "_") + ".txt"
+        def remainingDetections = getDetectionObjects()
+        saveDetectionsToFile(remainingDetections, desktopPath)
+        
+        println "Detections saved to ${desktopPath}"
+    } catch (Exception e) {
+        println "Error processing file: " + file.getName() + " - " + e.getMessage()
+    }
+}
+
+println "done"
+
+project.syncChanges()
+
+getQuPath().refreshProject()
+
+project = getProject()
+def entryList = project.getImageList()
+
+// Function to check if a region is fully black
+boolean isRegionFullyBlack(PathDetectionObject detection) {
+    def server = getCurrentImageData().getServer()
+    def roi = detection.getROI()
+    def request = RegionRequest.createInstance(server.getPath(), 1, roi)
+    def img = server.readBufferedImage(request)
+
+    int width = img.getWidth()
+    int height = img.getHeight()
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            def color = new Color(img.getRGB(x, y))
+            if (color.getRed() != 0 || color.getGreen() != 0 || color.getBlue() != 0) {
+                return false // Found a non-black pixel
+            }
+        }
+    }
+    return true // All pixels are black
+}
+
+// Function to save detections to a file
+def saveDetectionsToFile(detections, fileName) {
+    def file = new File(fileName)
+    file.withWriter { writer ->
+        detections.each { detection ->
+            def roi = detection.getROI()
+            def centerX = roi.getBoundsX() + roi.getBoundsWidth() / 2
+            def centerY = roi.getBoundsY() + roi.getBoundsHeight() / 2
+            writer.writeLine("Detection at (${centerX}, ${centerY})")
+        }
+    }
+}
