@@ -433,7 +433,66 @@ cenX = width/2;
 cenY = height/2;
 }
 
+overlaytest = true;
+if(overlaytest){
+makeLine(5197,2689,5197,2803,5215,2911,5263,3049,5269,3397,5077,3793);
 
+	//run("Clear", "slice"); // to delete stuff - prob makeselection before
+}
+
+	
+test10 = true;
+
+if(test10){
+	name = getInfo("image.filename");
+	originalName = "original" + name;
+	rename(originalName);
+	Dialog.create("Sample");
+	Dialog.addNumber("num here: ", 17);
+	Dialog.show();
+	e = Dialog.getNumber();
+	
+	redGreenName = "with_red/Green " + name;
+	
+	run("Duplicate...", "title=with_Red/Green duplicate");
+	rename(redGreenName);
+	run("Red/Green");
+	imageCalculator("Add create stack", originalName, redGreenName);
+	rename("addedImage for " + name);
+	
+	run("Kuwahara Filter", "sampling=e");
+	run("blue orange icb");
+	rename("blue/orange " + name);
+	run("Duplicate...", "title=Binary duplicate");
+	run("Make Binary", "calculate");
+	rename("Binary " + name);
+	
+	run("Stack to Images");
+	selectImage("Binary-0002");
+	run("Remove Outliers...", "radius=13 threshold=50 which=Bright");
+
+	
+	}
+
+test9 = false;
+if(test9){
+	name = getInfo("image.filename");
+	name2 = name + "ALT";
+	run("Duplicate...", "title=name2 duplicate");
+	run("Red/Green");
+	print("here2");
+	//imageCalculator("Add create stack", "name","name2");
+	//selectImage("Result of 5621.svs - Series 2");
+	//run("Duplicate...", "title = name2 duplicate");
+	//run("Gaussian Blur...", "sigma=6");
+	//setAutoThreshold("Moments dark");
+	
+	}
+
+
+
+testStraighten = false;
+if(testStraighten){
 inputFolder = getDir("Choose Input Folder");
 outputFolder = getDir("Choose Output folder"); // sanity check to ensure not same folder eventually
 
@@ -456,7 +515,7 @@ for (image = 0; image < list.length; image++) { // for ever svs...
 	
 LeftRightfolder = outputFolder + File.separator + list[image] + "PICS";	
 
-File.makeDirectory(LeftRightfolder);
+//File.makeDirectory(LeftRightfolder);
 
 // run process, save left and right files to ^ every time 
 
@@ -611,7 +670,7 @@ midPT = (gH[1] + gH[2])/2;
 
 run("Duplicate...", "title=right");
 selectImage("right");
-makeRectangle(midPT, 0, width, height);
+makeRectangle(midPT, 0, width-midPT, height);
 
 
 
@@ -619,7 +678,7 @@ run("Crop");
 
 
 
-name = LeftRightfolder + File.separator + "right" + list[image] ; 
+name = outputFolder + File.separator + "right" + list[image] ; 
 saveAs("Tiff", name);
 
 selectImage("Pog"); // change name to left (rename)
@@ -627,7 +686,7 @@ makeRectangle(0, 0, midPT, height);
 
 run("Crop");
 
-name = LeftRightfolder + File.separator + "left" + list[image]; 
+name = outputFolder + File.separator + "left" + list[image]; 
 saveAs("Tiff", name);
 
 
@@ -636,7 +695,7 @@ print("done cropping");
 //saveAs("Tiff", LeftRightfolder + File.separator + "left" + list[image]);
 
 }
-
+}
 
 //saveAs("Tiff", folder2 + File.separator + "left" + list[1]);
 
