@@ -1,0 +1,257 @@
+import slideio
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import os
+import time
+import re
+from scipy.interpolate import splprep, splev
+
+def extract_mpp(raw_metadata):
+    """Extracts the MPP (microns per pixel) value from raw metadata."""
+    mpp_match = re.search(r'MPP\s*=\s*([\d\.]+)', raw_metadata)
+    if mpp_match:
+        print(mpp_match.group(1))
+        return float(mpp_match.group(1))
+    return None
+
+def process_svs_file(file_path, output_dir, mpp_dict):
+    try:
+        print(f"Processing file: {file_path}")
+        
+        # Open the slide
+        slide = slideio.open_slide(file_path, "SVS")
+        mpp_value = extract_mpp(slide.raw_metadata)
+        if mpp_value is not None:
+            mpp_dict[os.path.basename(file_path)] = mpp_value
+        else:
+            print(f"MPP value not found for file: {file_path}")
+
+        # Get the first scene
+        scene = slide.get_scene(0)
+
+        # Define the region to read (x, y, width, height)
+        x = 0
+        y = 0
+        width = scene.rect[2] - x
+        height = scene.rect[3] - y
+        region = scene.read_block(rect=(x, y, width, height))
+
+        # Convert the region to an OpenCV-compatible format (BGR)
+        region_bgr = cv2.cvtColor(region, cv2.COLOR_RGBA2BGR)
+
+        # Convert to grayscale and blur
+        gray = cv2.cvtColor(region_bgr, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (9, 9), 2)
+
+        # Use Canny edge detector
+        edges = cv2.Canny(blurred, 50, 150)
+
+        # Find contours
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Initialize list to store merged edges
+        merged_edges = []
+
+        # Loop through all contours to find the largest 3 merged edges
+        for contour in contours:
+            # Compute the bounding box of the contour
+            x, y, w, h = cv2.boundingRect(contour)
+            bbox = (x, 0, x + w, region_bgr.shape[0])  # Use full height for the bounding box
+
+            # Check if the contour should be merged with existing edges
+            merge = False
+            for i, merged_edge in enumerate(merged_edges):
+                # Calculate the distance between the current edge and the merged edge
+                dist_x = min(abs(bbox[0] - merged_edge[2]), abs(bbox[2] - merged_edge[0]))
+                if dist_x < 200:
+                    # Merge the contours
+                    merged_edges[i] = (min(bbox[0], merged_edge[0]), 0,
+                                       max(bbox[2], merged_edge[2]), region_bgr.shape[0])
+                    merge = True
+                    break
+
+            if not merge:
+                merged_edges.append(bbox)
+
+        # Sort merged edges by width
+        merged_edges.sort(key=lambda x: (x[2] - x[0]), reverse=True)
+
+        # Keep only the largest 3 non-overlapping merged edges
+        unique_merged_edges = []
+        for bbox in merged_edges:
+            if len(unique_merged_edges) >= 3:
+                break
+            overlap = False
+            for ub in unique_merged_edges:
+                if not (bbox[2] < ub[0] or bbox[0] > ub[2]):
+                    overlap = True
+                    break
+            if not overlap:
+                unique_merged_edges.append(bbox)
+
+        # Create images for the largest 3 non-overlapping merged edges
+        edge_images = []
+        for i, bbox in enumerate(unique_merged_edges):
+            x1, y1, x2, y2 = bbox
+            edge_image = region_bgr[y1:y2, x1:x2]
+            edge_images.append(edge_image)
+            # Save the image to a PNG file
+            cv2.imwrite(os.path.join(output_dir, 'edge_image_{i+1}.png'), edge_image)
+            print(f"Saved edge image {i+1}")
+
+        # Further process each cropped edge image
+        for i, edge_image in enumerate(edge_images):
+            # Convert the edge image to HSV color space
+            # Convert the edge image to HSV color space
+            hsv = cv2.cvtColor(edge_image, cv2.COLOR_BGR2HSV)
+            h, s, v = cv2.split(hsv)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            v_clahe = clahe.apply(v)
+            hsv_clahe = cv2.merge([h, s, v_clahe])
+            image_clahe = cv2.cvtColor(hsv_clahe, cv2.COLOR_HSV2BGR)
+
+            # Convert the equalized image back to RGB for further processing
+            image_rgb_clahe = cv2.cvtColor(image_clahe, cv2.COLOR_BGR2RGB)
+
+            # Convert the image to HSV color space for color detection
+            hsv_eq = cv2.cvtColor(image_rgb_clahe, cv2.COLOR_RGB2HSV)
+            blurred = cv2.GaussianBlur(hsv_eq, (31, 31), 0)
+
+            # Define the range for dark purple and light purple in HSV
+            dark_purple_rgb = np.uint8([[[34, 22, 63]]])
+            dark_purple_hsv = cv2.cvtColor(dark_purple_rgb, cv2.COLOR_RGB2HSV)[0][0]
+
+            # Define HSV ranges (with some tolerance)
+            lower_dark_purple = np.array([dark_purple_hsv[0] - 10, 50, 50])
+            upper_dark_purple = np.array([dark_purple_hsv[0] + 10, 255, 255])
+
+            # Create masks for dark purple and light purple regions
+            mask_dark_purple = cv2.inRange(blurred, lower_dark_purple, upper_dark_purple)
+
+            kernel = np.ones((35, 35), np.uint8)
+            closed_mask = cv2.morphologyEx(mask_dark_purple, cv2.MORPH_CLOSE, kernel)
+
+            # Find contours in the masks
+            contours_dark_purple, _ = cv2.findContours(closed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            contours_dark_purple = sorted(contours_dark_purple, key=cv2.contourArea, reverse=True)
+
+            num_contours_to_keep = 2
+            largest_contours_dark_purple = contours_dark_purple[:num_contours_to_keep]
+            smoothed_contours = []
+
+            for contour in largest_contours_dark_purple:
+                # Smooth the contour using Douglas-Peucker algorithm
+                contour = contour.squeeze()  # Remove the extra dimension
+                x, y = contour[:, 0], contour[:, 1]
+                
+                # Ensure the contour is closed by adding the first point to the end
+                if not np.array_equal(contour[0], contour[-1]):
+                    x = np.append(x, x[0])
+                    y = np.append(y, y[0])
+
+                # Create a spline representation of the contour
+                tck, u = splprep([x, y], s=100.0, per=True)
+
+                # Generate new points
+                u_new = np.linspace(u.min(), u.max(), 100)
+                x_new, y_new = splev(u_new, tck, der=0)
+
+                # Combine x_new and y_new into a new contour array
+                smoothed_contour = np.array([x_new, y_new]).T.reshape(-1, 1, 2).astype(np.int32)
+                smoothed_contours.append(smoothed_contour)
+
+            # Create a blank mask
+            mask = np.zeros_like(closed_mask)
+
+            # Draw the largest contour on the mask
+            cv2.drawContours(mask, smoothed_contours, -1, (255), thickness=cv2.FILLED)
+
+            # Apply dilation to the mask
+            kernel = np.ones((105, 105), np.uint8)
+            dilated_mask = cv2.dilate(mask, kernel, iterations=1)
+
+            # Apply the dilated mask to the image
+            result = cv2.bitwise_and(image_rgb_clahe, image_rgb_clahe, mask=dilated_mask)
+
+            # Save the result
+            output_path = os.path.join(output_dir, f'result_{os.path.basename(file_path)}_edge_{i+1}.png')
+            cv2.imwrite(output_path, cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+            print(f"Processed and saved: {output_path}")
+
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+
+def process_straightened_files(initial_count, output_dir):
+    processed_count = 0
+    folder_path = 'straightenedfile'
+    processed_files = set()  # To keep track of processed files
+
+    while processed_count < initial_count * 2 * 3:
+        while not os.path.exists(folder_path):
+            print(f"Waiting for the folder '{folder_path}' to appear...")
+            time.sleep(10)
+        straightened_files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)) and not f.startswith('.')]
+
+        # Filter out already processed files
+        straightened_files = [f for f in straightened_files if f not in processed_files]
+
+        if len(straightened_files) > 0:
+            for filename in straightened_files:
+                file_path = os.path.join(folder_path, filename)
+                print(f"Processing straightened file: {file_path}")
+
+                # Read and convert the image
+                image = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+
+                # Convert to HSV and apply CLAHE to the V channel
+                hsv = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
+                h, s, v = cv2.split(hsv)
+                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                v_clahe = clahe.apply(v)
+                hsv_clahe = cv2.merge([h, s, v_clahe])
+                image_clahe = cv2.cvtColor(hsv_clahe, cv2.COLOR_HSV2RGB)
+
+                # Save the processed image
+                output_path = os.path.join(output_dir, f'processed_{os.path.basename(file_path)}')
+                cv2.imwrite(output_path, cv2.cvtColor(image_clahe, cv2.COLOR_RGB2BGR))
+                print(f"Processed and saved: {output_path}")
+
+                processed_files.add(filename)
+                processed_count += 1
+
+        time.sleep(60)
+
+def main():
+    svs_folder = "./svsfiles"  # Specify the folder containing your SVS files
+    output_dir = "./output"  # Specify the folder to save output images
+    initial_count = 0
+
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Dictionary to store MPP values
+    mpp_dict = {}
+
+    # Process SVS files in the specified folder
+    svs_files = [f for f in os.listdir(svs_folder) if f.endswith('.svs')]
+
+    for svs_file in svs_files:
+        process_svs_file(os.path.join(svs_folder, svs_file), output_dir, mpp_dict)
+        initial_count += 1
+
+    # Process straightened files
+    process_straightened_files(initial_count, output_dir)
+
+    # Save MPP values to a text file
+    mpp_output_file = os.path.join(output_dir, "mpp_values.txt")
+    with open(mpp_output_file, "w") as f:
+        for file_name, mpp_value in mpp_dict.items():
+            f.write(f"{file_name}: {mpp_value}\n")
+
+    print(f"Saved MPP values to {mpp_output_file}")
+
+if __name__ == "__main__":
+    main()
