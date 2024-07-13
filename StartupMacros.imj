@@ -424,6 +424,10 @@ break; // unnecessary
 macro "Measure Current Line or Test [b]"{
 //run("Measure");
 //getCursorLoc(x, y, z, flags);
+testIsolation();
+//run("Duplicate...", "title=new duplicate");
+//doSomething3();
+//onlyStraight();
 
 imgTest = false;
 if(imgTest){
@@ -433,15 +437,13 @@ cenX = width/2;
 cenY = height/2;
 }
 
-overlaytest = true;
+overlaytest = false;
 if(overlaytest){
-makeLine(5197,2689,5197,2803,5215,2911,5263,3049,5269,3397,5077,3793);
-
-	//run("Clear", "slice"); // to delete stuff - prob makeselection before
+makeLine(1744,1304,2096,1128,2448,1104,2592,832,3064,728,3784,976,4368,1640,4344,3056,4344,3104);//run("Clear", "slice"); // to delete stuff - prob makeselection before
 }
 
 	
-test10 = true;
+test10 = false;
 
 if(test10){
 	name = getInfo("image.filename");
@@ -470,7 +472,14 @@ if(test10){
 	run("Stack to Images");
 	selectImage("Binary-0002");
 	run("Remove Outliers...", "radius=13 threshold=50 which=Bright");
+	
+	selectImage("Binary-0003");
 
+	// sweep start
+	
+	// sweep end
+	// subtract those found in binary-0003 [with limits, soon]
+	// they are the RPE mainly
 	
 	}
 
@@ -489,7 +498,7 @@ if(test9){
 	
 	}
 
-
+//onlyStraight();
 
 testStraighten = false;
 if(testStraighten){
@@ -522,6 +531,7 @@ LeftRightfolder = outputFolder + File.separator + list[image] + "PICS";
 // pt 1 - straighten
 open(inputFolder + list[image]); // need file seperator?
 
+ 
 width = getWidth();
 height = getHeight();
 cenX = width/2;
@@ -1321,6 +1331,80 @@ return a;
 
 }
 
+function getControlPointModified(xPts,yPts) { 
+// function description
+foundFirst = false;
+for (b = 0; b < xPts.length - 1; b++) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+//yRn = round(yPts[b+1]);
+//vNext = getPixel(xPts[b+1],yRn);
+
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(v != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	break;
+	}// test if 8-bit runs faster ?
+	}
+	
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+makePoint(fX,fY);
+
+a = newArray(fX,fY);
+return a;
+
+}
+
+function getControlPointModified2(xPts,yPts) { 
+// function description
+foundFirst = false;
+for (b = xPts.length-1; b >=0; b--) {
+yR = round(yPts[b]);
+v = getPixel(xPts[b],yR);
+//yRn = round(yPts[b+1]);
+//vNext = getPixel(xPts[b+1],yRn);
+
+if(!foundFirst){
+fX = 500; // first x 
+fY = 500; // first y
+}
+lX = 0; // last x 
+lY = 0; // last y
+
+	if(foundFirst == false){
+	if(v != 0){
+	fX = xPts[b];
+	fY = yR; // check approx ? // also account for black spaces // random one (optic nerve)
+	foundFirst = true;
+	break;
+	}// test if 8-bit runs faster ?
+	}
+	
+}
+
+avgX = (fX + lX)/2;
+avgY = (fY + lY)/2;
+setKeyDown("shift");
+makePoint(fX,fY);
+
+a = newArray(fX,fY);
+return a;
+
+}
+
 function evalColumn(x,height) { // returns false if there is a non black, true if all black
 // function description
 isAllBlack = true;
@@ -1339,4 +1423,149 @@ return isAllBlack;
 
 }
 
+function testIsolation() { 
+// function description
+// found first
+width = getWidth();
+height = getHeight();
+cenX = width/2;
+cenY = height/2;
+xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 600;
+	fListX = newArray(numIterations);
+	fListY = newArray(numIterations);
+	thetaTest = 0; // will refine later ...
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+	if(a < 150 || (a > 450)){ // neg to positive ???
+		for (i = 0; i < cenX; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPointModified2(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+		}
+		else{
+		//thetaTest = 0;	
+		for (i = cenX; i < width; i++) {
+		//counter = 0;
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPointModified(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+	// can also just straighten 2x 
+			
+			}
+	makeSelection("freeline", xPts, yPts);
+	
+	
+	fListX[a] = x;
+	fListY[a] = y;
+	}
+	cleanXList1 = Array.deleteValue(fListX, 500);
+	cleanYList1 = Array.deleteValue(fListY, 500);
+	
+	cleanXList1 = Array.deleteValue(cleanXList1, 250);
+	cleanYList1 = Array.deleteValue(cleanYList1, 250);
+	
+	
+	
+	makeSelection("freeline", cleanXList1, cleanYList1);
+	wait(3);
+	for (i = 0; i < 0; i++) {
+	Fit.doFit(i, cleanXList1, cleanYList1);
+	Fit.plot();
+	wait(10);
+	}
 
+}
+
+function onlyStraight() { 
+// function description
+
+width = getWidth();
+height = getHeight();
+cenX = width/2;
+cenY = height/2;
+xPts = newArray(width-cenX);
+	yPts = newArray(width-cenX);
+	numIterations = 600;
+	fListX = newArray(numIterations);
+	fListY = newArray(numIterations);
+	thetaTest = 0; // will refine later ...
+		for (a = 0; a < numIterations; a++) {
+	counter = 0;
+	if(a < 150 || (a > 450)){ // neg to positive ???
+		for (i = 0; i < cenX; i++) {
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+		}
+		else{
+		//thetaTest = 0;	
+		for (i = cenX; i < width; i++) {
+		//counter = 0;
+		xPts[counter] = i;
+		yPts[counter] = tan(thetaTest) * (i-cenX) + cenY;
+		counter = counter + 1;
+		}
+		step = PI / 300;
+		thetaTest = thetaTest + step;
+		
+	//makeSelection("freeline", xPts, yPts);
+	pt = getControlPoint(xPts,yPts);
+	x = pt[0];
+	y = pt[1];
+	// can also just straighten 2x 
+			
+			}
+	
+	fListX[a] = x;
+	fListY[a] = y;
+	}
+	cleanXList1 = Array.deleteValue(fListX, 250);
+	cleanYList1 = Array.deleteValue(fListY, 250);
+	
+	makeSelection("freeline", cleanXList1, cleanYList1);
+}
+
+function doSomething3() { 
+// function description
+greenThreshold = 60;
+print("starting");
+width = getWidth();
+height = getHeight();
+for (x = 0; x < width; x++) {
+	for (y = 0; y < height; y++) {
+	v = getPixel(x, y);
+	if(v < greenThreshold){
+		v = 255;
+		setKeyDown("shift");
+		makePoint(x, y);
+		}
+	}
+}
+
+}
