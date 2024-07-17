@@ -429,8 +429,12 @@ macro "Measure Current Line or Test [b]"{
 //doSomething3();
 //onlyStraight();
 
-findTopLims();
-findBotLims();
+top = findTopLims();
+print("top done");
+bot = findBotLims();
+print("bot done");
+analyzeLims1(top,bot);
+print("all done");
 
 imgTest = false;
 if(imgTest){
@@ -1606,30 +1610,73 @@ function findTopLims() {
 // function description
 width = getWidth();
 height = getHeight();
+topLimYVals = newArray(height);
+
 for (x = 0; x < width; x++) {
+	topLimYVals[x] = -1;
 	for (y = 0; y < height; y++) {
 	v = getPixel(x, y);
 	if(v != 0 ){
 		setKeyDown("shift");
-		makePoint(x, y);
+		//makePoint(x, y);
+		topLimYVals[x] = y;
 		break;
 		}
+		
 	}
 }
+//topLimYVals = Array.deleteValue(topLimYVals, -1); // change to is black eventually...
+return topLimYVals;
 }
 
 function findBotLims() { 
 // function description
 width = getWidth();
 height = getHeight();
+botLimYVals = newArray(height);
 for (x = 0; x < width; x++) {
+	botLimYVals[x] = -1;
 	for (y = height; y >= 0; y--) {
 	v = getPixel(x, y);
 	if(v != 0 ){
 		setKeyDown("shift");
-		makePoint(x, y);
+		//makePoint(x, y);
+		botLimYVals[x] = y;
 		break;
+		}
+		
+	}
+}
+//botLimYVals = Array.deleteValue(botLimYVals, -1); // weird...
+return botLimYVals;
+}
+
+function analyzeLims1(topLims,botLims) { 
+// function description
+avgThickness = 0;
+sumThicknesses = 0;
+currThickness = 0; // clean 0s
+thicknessArr = newArray(topLims.length-1);
+for (i = 0; i < topLims.length; i++) { // end cases
+	if(topLims[i] != -1){
+		currThickness =  botLims[i] - topLims[i];
+		sumThicknesses = sumThicknesses + (currThickness);
+		thicknessArr[i] = currThickness;
+		}
+		
+
+}
+
+avgThickness = sumThicknesses / topLims.length; // - 1 or plus ?
+// re evaluate
+mu = 100;
+for (i = 0; i < thicknessArr.length; i++) {
+if(thicknessArr[i] != 0){
+	if(thicknessArr[i] > avgThickness + mu ){
+		setKeyDown("shift");
+		makePoint(i, topLims[i]);
 		}
 	}
 }
+
 }
