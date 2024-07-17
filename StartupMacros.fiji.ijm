@@ -428,12 +428,13 @@ macro "Measure Current Line or Test [b]"{
 //run("Duplicate...", "title=new duplicate");
 //doSomething3();
 //onlyStraight();
-
+run("8-bit");
 top = findTopLims();
 print("top done");
 bot = findBotLims();
 print("bot done");
-analyzeLims1(top,bot);
+//analyzeLims1(top,bot);
+analyzeLims2(top);
 print("all done");
 
 imgTest = false;
@@ -1646,6 +1647,7 @@ for (x = 0; x < width; x++) {
 		}
 		
 	}
+	
 }
 //botLimYVals = Array.deleteValue(botLimYVals, -1); // weird...
 return botLimYVals;
@@ -1667,16 +1669,38 @@ for (i = 0; i < topLims.length; i++) { // end cases
 
 }
 
-avgThickness = sumThicknesses / topLims.length; // - 1 or plus ?
-// re evaluate
-mu = 100;
+avgThickness = sumThicknesses / topLims.length; // - 1 or plus ? -> use array.statistics instead
+// re evaluate -> add too small as well ?
+withoutZero = Array.deleteValue(thicknessArr, 0);
+Array.getStatistics(withoutZero, min, max, mean, stdDev);
+
+mu = 75;
 for (i = 0; i < thicknessArr.length; i++) {
 if(thicknessArr[i] != 0){
-	if(thicknessArr[i] > avgThickness + mu ){
+	if(thicknessArr[i] > avgThickness + stdDev ){
 		setKeyDown("shift");
 		makePoint(i, topLims[i]);
 		}
 	}
 }
 
+print(min);  // 2 ?????
+print(stdDev);
+print(max);
+
+}
+
+function analyzeLims2(topLims){
+	cleanTopLims = Array.deleteValue(topLims, -1);
+	Array.getStatistics(cleanTopLims, min, max, mean, stdDev);
+	
+	mu = -65;
+	
+	for (i = 0; i < topLims.length ; i++) {
+	if(topLims[i] < mean + stdDev + mu){ // > was minimums -1 wouldnt matter since negative ? 
+		setKeyDown("shift");
+		makePoint(i, mean);
+		
+		}	
+	}
 }
