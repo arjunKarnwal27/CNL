@@ -427,7 +427,10 @@ macro "Measure Current Line or Test [b]"{
 //testIsolation();
 //run("Duplicate...", "title=new duplicate");
 //doSomething3();
-onlyStraight();
+//onlyStraight();
+
+findTopLims();
+findBotLims();
 
 imgTest = false;
 if(imgTest){
@@ -1599,21 +1602,34 @@ xPts = newArray(width-cenX);
 	makeSelection("freeline", cleanXList1, cleanYList1);
 }
 
-function doSomething3() { 
+function findTopLims() { 
 // function description
-greenThreshold = 60;
-print("starting");
 width = getWidth();
 height = getHeight();
 for (x = 0; x < width; x++) {
 	for (y = 0; y < height; y++) {
 	v = getPixel(x, y);
-	if(v < greenThreshold){
-		v = 255;
+	if(v != 0 ){
 		setKeyDown("shift");
 		makePoint(x, y);
+		break;
 		}
 	}
 }
+}
 
+function findBotLims() { 
+// function description
+width = getWidth();
+height = getHeight();
+for (x = 0; x < width; x++) {
+	for (y = height; y >= 0; y--) {
+	v = getPixel(x, y);
+	if(v != 0 ){
+		setKeyDown("shift");
+		makePoint(x, y);
+		break;
+		}
+	}
+}
 }
